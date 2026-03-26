@@ -1,36 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Olympole MVP
 
-## Getting Started
+Olympole is the ESC Club operations platform for OLYMPOLE 2026.
 
-First, run the development server:
+This version is a working MVP built on Next.js 16 + Supabase with:
+- auth + protected admin routes
+- persisted registrations
+- admin event/match/result management
+- public schedule/results/match center from database
+- predictions (winner-pick with scoring)
+- writing submissions + voting + admin moderation
+- runtime feature toggles
+
+## Stack
+
+- Next.js 16.2.1 (App Router)
+- React 19
+- TypeScript
+- Tailwind CSS v4
+- Supabase (Auth + Postgres + RLS)
+- Zod validation
+
+## Environment Variables
+
+Create `.env` with:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=
+SUPABASE_SEC_KEY=
+SUPABASE_CONNECTION_STRING=
+ADMIN_EMAILS=admin1@example.com,admin2@example.com
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Notes:
+- `SUPABASE_SEC_KEY` must stay server-only.
+- `ADMIN_EMAILS` is used by app-level role sync and should contain lowercase emails.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm install
+```
 
-## Learn More
+Supabase local init is already present in `supabase/`.
 
-To learn more about Next.js, take a look at the following resources:
+## Database Migrations
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Migration files are in `supabase/migrations/`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Apply migration to remote:
 
-## Deploy on Vercel
+```bash
+supabase db push --db-url "$SUPABASE_CONNECTION_STRING"
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+If you cannot resolve `db.<project-ref>.supabase.co`, verify your connection string and DNS/network access.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Run
+
+```bash
+pnpm dev
+```
+
+## Quality Commands
+
+```bash
+npm run lint
+pnpm build
+```
+
+## Key Routes
+
+Public:
+- `/`
+- `/sports`
+- `/schedule`
+- `/results`
+- `/match-center`
+- `/predictions`
+- `/register`
+- `/culture/*`
+- `/login`
+
+Admin (protected):
+- `/admin`
+- `/admin/users`
+- `/admin/events`
+- `/admin/system`
+- `/admin/settings`
+
+## MVP Scope Delivered
+
+- Stabilized codebase and fixed lint blockers
+- Added backend foundation with migration + RLS policies
+- Implemented auth flow and route protection
+- Wired registration submission + admin approval flow
+- Replaced static schedule/results/match-center with DB reads
+- Implemented event/match/result admin CRUD basics
+- Implemented prediction submissions + scoring rerun action
+- Implemented writing submissions, voting, moderation
+- Added loading/error/not-found handling
+
+## Backup / Ops Notes
+
+- Keep migration SQL under `supabase/migrations/` as source of truth.
+- Use periodic Postgres dumps from Supabase dashboard or `pg_dump` against `SUPABASE_CONNECTION_STRING`.
+- Record admin actions via `admin_activity_logs` (already wired).

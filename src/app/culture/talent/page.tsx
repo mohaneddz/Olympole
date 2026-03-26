@@ -1,4 +1,3 @@
-import { GlowCard } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
 const contestants = [
@@ -17,7 +16,7 @@ export default function TalentShowPage() {
                     Cyber-Talent Show
                 </h1>
                 <p className="text-xl text-foreground/70 max-w-3xl mx-auto">
-                    The main stage is live. Watch the world's most spectacular performances merging human skill with next-gen technology.
+                    The main stage is live. Watch the world&apos;s most spectacular performances merging human skill with next-gen technology.
                 </p>
             </div>
 
@@ -27,7 +26,6 @@ export default function TalentShowPage() {
                     <Button variant="glow" size="lg" className="px-12 h-16 text-xl rounded-full">Enter Virtual Arena</Button>
                 </div>
                 <div className="w-full h-full bg-gradient-to-br from-blue-900 to-black relative">
-                    {/* Fake stage lighting */}
                     <div className="absolute top-0 left-[20%] w-32 h-[150%] bg-primary/20 blur-3xl transform -rotate-45 origin-top"></div>
                     <div className="absolute top-0 right-[20%] w-32 h-[150%] bg-secondary/20 blur-3xl transform rotate-45 origin-top"></div>
                 </div>

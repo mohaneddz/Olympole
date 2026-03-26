@@ -1,6 +1,5 @@
-import { GlowCard } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import Link from "next/link";
+import { GlowCard } from "@/components/ui/Card";
 import { Paintbrush, Mic2, BookOpen } from "lucide-react";
 
 export default function CultureHub() {
@@ -11,7 +10,7 @@ export default function CultureHub() {
           Culture Hub
         </h1>
         <p className="text-xl text-foreground/70 max-w-2xl mx-auto">
-          Olympole 2026 isn't just about physical superiority. Explore the apex of human creativity in our digital exhibits.
+          Olympole 2026 is not just about physical superiority. Explore the apex of human creativity in our digital exhibits.
         </p>
       </div>
 
@@ -22,9 +21,7 @@ export default function CultureHub() {
               <Paintbrush className="w-10 h-10 text-secondary" />
             </div>
             <h3 className="text-2xl font-bold mb-4">Digital Art Exhibition</h3>
-            <p className="text-foreground/70 mb-6 flex-1">
-              Immersive holographic galleries and algorithmic masterpiece displays.
-            </p>
+            <p className="text-foreground/70 mb-6 flex-1">Immersive holographic galleries and algorithmic masterpiece displays.</p>
             <span className="text-secondary font-bold text-sm uppercase tracking-wider">Enter Gallery</span>
           </GlowCard>
         </Link>
@@ -35,9 +32,7 @@ export default function CultureHub() {
               <Mic2 className="w-10 h-10 text-primary" />
             </div>
             <h3 className="text-2xl font-bold mb-4">Cyber-Talent Show</h3>
-            <p className="text-foreground/70 mb-6 flex-1">
-              Live performances augmented by neural-reactive visuals and droneography.
-            </p>
+            <p className="text-foreground/70 mb-6 flex-1">Live performances augmented by neural-reactive visuals and droneography.</p>
             <span className="text-primary font-bold text-sm uppercase tracking-wider">Watch Live</span>
           </GlowCard>
         </Link>
@@ -45,14 +40,10 @@ export default function CultureHub() {
         <Link href="/culture/writing" className="block outline-none">
           <GlowCard glowColor="purple" className="p-8 flex flex-col items-center text-center h-full hover:scale-105 transition-transform cursor-pointer">
             <div className="w-20 h-20 rotate-45 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center mb-6 border border-indigo-500/50">
-              <div className="-rotate-45">
-                <BookOpen className="w-10 h-10 text-indigo-400" />
-              </div>
+              <div className="-rotate-45"><BookOpen className="w-10 h-10 text-indigo-400" /></div>
             </div>
             <h3 className="text-2xl font-bold mb-4">Writing Contest</h3>
-            <p className="text-foreground/70 mb-6 flex-1">
-              The grand archive of neo-literature. Read, judge, and submit.
-            </p>
+            <p className="text-foreground/70 mb-6 flex-1">The grand archive of neo-literature. Read, judge, and submit.</p>
             <span className="text-indigo-400 font-bold text-sm uppercase tracking-wider">Read Archives</span>
           </GlowCard>
         </Link>

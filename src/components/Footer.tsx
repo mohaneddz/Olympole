@@ -1,49 +1,73 @@
+import Image from "next/image";
 import Link from "next/link";
+import { Facebook, Instagram, Linkedin } from "lucide-react";
+
+const socialLinks = [
+  {
+    href: "#",
+    label: "Instagram",
+    icon: <Instagram className="h-9 w-9" />,
+  },
+  {
+    href: "#",
+    label: "LinkedIn",
+    icon: <Linkedin className="h-9 w-9" />,
+  },
+  {
+    href: "#",
+    label: "Gmail",
+    icon: <span className="text-5xl font-black leading-none">M</span>,
+  },
+  {
+    href: "#",
+    label: "Facebook",
+    icon: <Facebook className="h-9 w-9" />,
+  },
+];
 
 export function Footer() {
-    return (
-        <footer className="border-t border-card-border mt-auto bg-background py-10">
-            <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    <div className="col-span-1 md:col-span-1">
-                        <span className="text-xl font-bold tracking-tighter bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-                            OLYMPOLE 2026
-                        </span>
-                        <p className="mt-4 text-sm text-foreground/60 max-w-xs">
-                            The ultimate global event blending sports, cyber-culture, and next-generation competition.
-                        </p>
-                    </div>
-                    <div>
-                        <h4 className="font-semibold text-foreground mb-4">Events</h4>
-                        <ul className="space-y-2 text-sm text-foreground/60">
-                            <li><Link href="/schedule" className="hover:text-primary transition-colors">Schedule</Link></li>
-                            <li><Link href="/sports" className="hover:text-primary transition-colors">Sports Hub</Link></li>
-                            <li><Link href="/match-center" className="hover:text-primary transition-colors">Match Center</Link></li>
-                            <li><Link href="/results" className="hover:text-primary transition-colors">Results & Brackets</Link></li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 className="font-semibold text-foreground mb-4">Culture</h4>
-                        <ul className="space-y-2 text-sm text-foreground/60">
-                            <li><Link href="/culture/talent" className="hover:text-primary transition-colors">Talent Show</Link></li>
-                            <li><Link href="/culture/writing" className="hover:text-primary transition-colors">Writing Contest</Link></li>
-                            <li><Link href="/culture/art" className="hover:text-primary transition-colors">Art Exhibition</Link></li>
-                            <li><Link href="/predictions" className="hover:text-primary transition-colors">Predictions Hub</Link></li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 className="font-semibold text-foreground mb-4">Portal</h4>
-                        <ul className="space-y-2 text-sm text-foreground/60">
-                            <li><Link href="/register" className="hover:text-primary transition-colors">Register Now</Link></li>
-                            <li><Link href="/admin" className="hover:text-primary transition-colors">Admin Dashboard</Link></li>
-                            <li><span className="hover:text-primary transition-colors cursor-pointer">Support</span></li>
-                        </ul>
-                    </div>
-                </div>
-                <div className="mt-10 border-t border-card-border pt-6 text-center text-sm text-foreground/40">
-                    <p>© 2026 Olympole Event Committee. All rights reserved.</p>
-                </div>
-            </div>
-        </footer>
-    );
+  return (
+    <footer className="relative mt-auto overflow-hidden bg-[#02081e]">
+      <div className="relative mx-auto flex min-h-[420px] w-full items-center justify-center px-4 py-12 sm:min-h-[500px] sm:py-16">
+        <Image
+          src="/images/footer.png"
+          alt=""
+          fill
+          sizes="100vw"
+          className="pointer-events-none select-none object-cover object-center"
+        />
+
+        <div className="relative z-10 flex w-full max-w-xl flex-col items-center text-center">
+          <Image
+            src="/images/esc.png"
+            alt="ESC Club logo"
+            width={132}
+            height={132}
+            className="h-20 w-20 sm:h-28 sm:w-28"
+          />
+
+          <h2 className="mt-3 font-heading text-4xl font-black tracking-tight text-[#a4e6ff] sm:text-6xl">
+            Olympole 2026
+          </h2>
+
+          <p className="mt-2 text-3xl font-extrabold tracking-wide text-white sm:text-5xl">
+            © 2026 ESCC
+          </p>
+
+          <nav aria-label="Social links" className="mt-6 flex items-center gap-5 sm:gap-8">
+            {socialLinks.map((social) => (
+              <Link
+                key={social.label}
+                href={social.href}
+                aria-label={social.label}
+                className="text-white/85 transition hover:text-white"
+              >
+                {social.icon}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      </div>
+    </footer>
+  );
 }
