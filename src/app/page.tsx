@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
-import { GlowCard, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/Card";
+import { GlowCard } from "@/components/ui/Card";
 import { ArrowRight, Trophy, Calendar, Radio } from "lucide-react";
 
 export default function Home() {
@@ -30,8 +30,8 @@ export default function Home() {
 
         <div className="container relative z-10 mx-auto px-4 text-center mt-[-5vh] center col gap-4">
 
-          <Image src="/images/fire.png" height={1024} width={1024} alt="" className="w-80"/>
-          <Image src="/images/circles.png" height={1024} width={1024} alt="" className="w-48"/>
+          <Image src="/images/fire.png" height={1024} width={1024} alt="" className="w-80 h-auto"/>
+          <Image src="/images/circles.png" height={1024} width={1024} alt="" className="w-48 h-auto"/>
           
           <h1 className="font-extrabold tracking-tighter mb-6">
             <span className="text-6xl md:text-8xl lg:text-9xl text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
