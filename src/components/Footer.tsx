@@ -27,47 +27,34 @@ const socialLinks = [
 
 export function Footer() {
   return (
-    <footer className="relative mt-auto overflow-hidden bg-[#02081e]">
-      <div className="relative mx-auto flex min-h-[420px] w-full items-center justify-center px-4 py-12 sm:min-h-[500px] sm:py-16">
-        <Image
-          src="/images/footer.png"
-          alt=""
-          fill
-          sizes="100vw"
-          className="pointer-events-none select-none object-cover object-center"
-        />
+    <footer className="w-full mt-auto bg-black flex justify-center items-center">
+      <Image
+        src="/images/backgrounds/footer.png"
+        height={1080}
+        width={1920}
+        alt="Footer Background"
+        className="w-full h-auto object-cover pointer-events-none select-none max-w-full"
+      />
 
-        <div className="relative z-10 flex w-full max-w-xl flex-col items-center text-center">
-          <Image
-            src="/images/esc.png"
-            alt="ESC Club logo"
-            width={132}
-            height={132}
-            className="h-20 w-20 sm:h-28 sm:w-28"
-          />
-
-          <h2 className="mt-3 font-heading text-4xl font-black tracking-tight text-[#a4e6ff] sm:text-6xl">
-            Olympole 2026
-          </h2>
-
-          <p className="mt-2 text-3xl font-extrabold tracking-wide text-white sm:text-5xl">
-            © 2026 ESCC
-          </p>
-
-          <nav aria-label="Social links" className="mt-6 flex items-center gap-5 sm:gap-8">
-            {socialLinks.map((social) => (
-              <Link
-                key={social.label}
-                href={social.href}
-                aria-label={social.label}
-                className="text-white/85 transition hover:text-white"
-              >
-                {social.icon}
-              </Link>
-            ))}
-          </nav>
+      {/*
+      <div className="container relative z-10 mx-auto flex h-full flex-col items-center justify-end pb-8 pt-24 gap-6">
+        <div className="flex items-center gap-8">
+          {socialLinks.map((link, index) => (
+            <Link
+              key={index}
+              href={link.href}
+              className="text-white/80 hover:text-cyan-400 transition-colors drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] scale-100 hover:scale-110"
+              aria-label={link.label}
+            >
+              {link.icon}
+            </Link>
+          ))}
         </div>
-      </div>
+        <p className="text-sm text-white/50 text-center">
+          &copy; 2026 Olympole. All rights reserved.
+        </p>
+      </div> 
+      */}
     </footer>
   );
 }

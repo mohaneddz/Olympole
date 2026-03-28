@@ -28,7 +28,7 @@ export function LoginForm() {
           ) : null}
           <div className="mt-4 text-center">
             <button type="button" onClick={() => setIsLogin(false)} className="text-white/60 hover:text-white text-sm transition-colors mt-2">
-              Don't have an account? Sign up
+              Don&apos;t have an account? Sign up
             </button>
           </div>
         </form>
