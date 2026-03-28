@@ -1,34 +1,25 @@
-import { GlowCard } from "@/components/ui/Card";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { ArrowRight, Trophy, Users, PersonStanding } from "lucide-react";
+import { getPublicEvents, getPublicMatches, getPublicSports } from "@/lib/queries";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const sportsCategories = [
-  {
-    title: "Collective Sports",
-    icon: <Users className="w-8 h-8 text-primary" />,
-    description: "Team-based events including Basketball, Cyber-Soccer, and Relay.",
-    color: "cyan",
-  },
-  {
-    title: "Individual Events",
-    icon: <PersonStanding className="w-8 h-8 text-secondary" />,
-    description: "Athletics, Swimming, Gymnastics and solo Mind Sports.",
-    color: "purple",
-  },
-  {
-    title: "Women's Competitions",
-    icon: <Trophy className="w-8 h-8 text-accent" />,
-    description: "Featured leagues and tournaments across all major categories.",
-    color: "cyan",
-  },
-];
+export default async function SportsHub() {
+  const supabase = await createSupabaseServerClient();
+  const [sports, events, matches, teamsRes] = await Promise.all([
+    getPublicSports(),
+    getPublicEvents(),
+    getPublicMatches(),
+    supabase.from("teams").select("id, sport_id"),
+  ]);
+  const teams = teamsRes.data ?? [];
 
-const featuredMatches = [
-  { team1: "Neo-Tokyo", team2: "Paris Prime", sport: "Cyber-Soccer", time: "14:00 Today" },
-  { team1: "New York", team2: "London", sport: "Basketball", time: "18:30 Today" },
-];
+  const teamCountBySport = teams.reduce<Record<string, number>>((acc, team) => {
+    acc[team.sport_id] = (acc[team.sport_id] ?? 0) + 1;
+    return acc;
+  }, {});
 
-export default function SportsHub() {
+  const featuredMatches = matches.filter((match) => match.status !== "completed").slice(0, 4);
+
   return (
     <div className="container mx-auto px-4 py-16 max-w-7xl flex flex-col gap-12 flex-1">
       <div className="text-center">
@@ -36,46 +27,80 @@ export default function SportsHub() {
           Sports Hub
         </h1>
         <p className="text-xl text-foreground/70 max-w-2xl mx-auto">
-          The pinnacle of physical and tactical competition. Choose a category to track schedules, teams, and live events.
+          Track all collective and individual competitions with real event data from the operations backend.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {sportsCategories.map((cat, i) => (
-          <GlowCard key={i} glowColor={cat.color as "cyan" | "purple"} className="p-8 flex flex-col items-center text-center">
-            <div className={`w-16 h-16 rounded-full bg-background border border-card-border flex items-center justify-center mb-6 shadow-[0_0_15px_rgba(0,0,0,0.5)]`}>
-              {cat.icon}
-            </div>
-            <h3 className="text-2xl font-bold mb-4">{cat.title}</h3>
-            <p className="text-foreground/70 mb-8 flex-1">{cat.description}</p>
-            <Button variant="neonPill" size="pill" className="w-full group">
-              Explore <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </GlowCard>
-        ))}
-      </div>
-
-      <div className="mt-12 py-12 border-t border-card-border">
-        <h2 className="text-3xl font-bold mb-8 flex items-center gap-3">
-          <span className="w-3 h-3 rounded-full bg-accent animate-pulse shadow-[0_0_10px_rgba(255,0,85,0.8)]"></span>
-          Upcoming Finals Spotlight
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {featuredMatches.map((match, i) => (
-            <div key={i} className="flex flex-col sm:flex-row items-center justify-between p-6 glass-card rounded-xl border border-primary/20 hover:border-primary/50 transition-colors">
-              <div className="flex-1 text-center sm:text-left mb-4 sm:mb-0">
-                <span className="text-xs uppercase tracking-wider text-primary font-semibold block mb-2">{match.sport} • {match.time}</span>
-                <div className="flex items-center justify-center sm:justify-start gap-4 text-xl font-bold">
-                  <span>{match.team1}</span>
-                  <span className="text-foreground/40 text-sm">VS</span>
-                  <span>{match.team2}</span>
-                </div>
-              </div>
-              <Button variant="neonPill" size="pill">Set Reminder</Button>
-            </div>
-          ))}
+      {sports.length === 0 ? (
+        <div className="rounded-xl border border-card-border p-6 text-foreground/70">
+          No sports configured yet.
         </div>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {sports.map((sport) => {
+            const relatedEvents = events.filter((event) => event.sport_id === sport.id);
+            return (
+              <article key={sport.id} className="glass-card rounded-xl border border-card-border p-6 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-2xl font-bold">{sport.name}</h2>
+                  <span className="text-xs uppercase rounded-full border border-card-border px-2 py-1">
+                    {sport.sport_type}
+                  </span>
+                </div>
+                <p className="text-sm text-foreground/70">
+                  {sport.description ?? "No description provided."}
+                </p>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-lg border border-card-border p-2">
+                    <p className="text-xs text-foreground/60">Events</p>
+                    <p className="text-lg font-semibold">{relatedEvents.length}</p>
+                  </div>
+                  <div className="rounded-lg border border-card-border p-2">
+                    <p className="text-xs text-foreground/60">Teams</p>
+                    <p className="text-lg font-semibold">{teamCountBySport[sport.id] ?? 0}</p>
+                  </div>
+                  <div className="rounded-lg border border-card-border p-2">
+                    <p className="text-xs text-foreground/60">Mode</p>
+                    <p className="text-sm font-semibold">{sport.is_team_based ? "Team" : "Solo"}</p>
+                  </div>
+                </div>
+                <div className="pt-2">
+                  <Button variant="outline" asChild>
+                    <Link href="/schedule">View Schedule</Link>
+                  </Button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      <section className="space-y-4">
+        <h2 className="text-3xl font-bold">Upcoming Matches</h2>
+        {featuredMatches.length === 0 ? (
+          <div className="rounded-xl border border-card-border p-4 text-foreground/70">
+            No upcoming matches.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {featuredMatches.map((match) => (
+              <div key={match.id} className="rounded-xl border border-card-border p-4 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="font-semibold">
+                    {match.team_a} vs {match.team_b}
+                  </p>
+                  <p className="text-sm text-foreground/60">
+                    {match.sport} • {new Date(match.starts_at).toLocaleString()}
+                  </p>
+                </div>
+                <span className="text-xs uppercase rounded-full border border-card-border px-2 py-1">
+                  {match.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

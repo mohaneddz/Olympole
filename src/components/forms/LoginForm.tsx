@@ -37,8 +37,9 @@ export function LoginForm() {
           <h3 className="text-xl md:text-2xl font-bold text-white mb-2 uppercase tracking-wide">Create Account</h3>
           <div className="space-y-4">
             <input name="full_name" required placeholder="Full Name" className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all" />
+            <input name="username" placeholder="Username (optional)" className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all" />
             <input name="email" type="email" required placeholder="Email Address" className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all" />
-            <input name="password" type="password" required placeholder="Password (Min 6 chars)" className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all" />
+            <input name="password" type="password" required placeholder="Password (8+ chars, upper/lower/number)" className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all" />
           </div>
           <Button type="submit" variant="neonPill" size="pill" className="w-full mt-2 font-bold tracking-widest uppercase transition-all hover:scale-[1.02]" disabled={signingUp}>
             {signingUp ? "Creating..." : "Sign Up"}
