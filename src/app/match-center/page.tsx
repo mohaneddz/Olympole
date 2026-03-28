@@ -28,7 +28,13 @@ export default async function MatchCenter() {
                 <span>{match.team_b}</span>
                 <span>{match.score_b}</span>
               </div>
-              <p className="text-foreground/60 text-sm mt-4">{new Date(match.starts_at).toLocaleString()} - {match.venue}</p>
+              <div className="mt-4 space-y-1 text-sm text-foreground/60">
+                <p>{new Date(match.starts_at).toLocaleString()} - {match.venue}</p>
+                {match.live_minute !== null && match.live_minute !== undefined ? (
+                  <p>Live minute: {match.live_minute}&apos;</p>
+                ) : null}
+                {match.mvp_player ? <p>MVP: {match.mvp_player}</p> : null}
+              </div>
             </div>
           ))}
         </div>

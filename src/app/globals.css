@@ -42,6 +42,19 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading), var(--font-sans);
 }
 
+/* Force purple/pink text treatments to white across the app */
+[class*="text-purple-"],
+[class*="text-pink-"],
+.text-secondary {
+  color: #ffffff !important;
+}
+
+.bg-clip-text.text-transparent {
+  color: #ffffff !important;
+  background-image: none !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
 /* Custom Utilities for Glowing Effects */
 @layer utilities {
   .glow-border-cyan {
