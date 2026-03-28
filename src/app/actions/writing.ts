@@ -39,19 +39,31 @@ export async function voteSubmissionAction(formData: FormData) {
   const user = await requireAuth();
   const submissionId = String(formData.get("submission_id") ?? "");
   if (!submissionId) {
-    return;
+    return failure("Missing submission id.");
   }
 
   const supabase = await createSupabaseServerClient();
-  await supabase.from("submission_votes").insert({
+  const { error } = await supabase.from("submission_votes").insert({
     submission_id: submissionId,
     voter_user_id: user.id,
   });
 
+  if (error) {
+    return failure(error.message.includes("duplicate key") ? "You already voted for this submission." : error.message);
+  }
+
   revalidatePath("/culture/writing");
+  return success("Vote submitted.");
 }
 
-export async function moderateWritingAction(formData: FormData) {
+export async function voteSubmissionWithStateAction(
+  _: ActionResponse,
+  formData: FormData
+): Promise<ActionResponse> {
+  return voteSubmissionAction(formData);
+}
+
+export async function moderateWritingAction(formData: FormData): Promise<void> {
   await requireAdmin();
 
   const id = String(formData.get("id") ?? "");
@@ -63,7 +75,10 @@ export async function moderateWritingAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  await supabase.from("writing_submissions").update({ status, is_featured: featured }).eq("id", id);
+  const { error } = await supabase.from("writing_submissions").update({ status, is_featured: featured }).eq("id", id);
+  if (error) {
+    return;
+  }
 
   const admin = await getCurrentUser();
   if (admin) {

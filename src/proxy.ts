@@ -26,14 +26,14 @@ export async function proxy(request: NextRequest) {
   const { data } = await supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
 
-  if (pathname.startsWith("/admin") && !data.user) {
+  if ((pathname.startsWith("/admin") || pathname.startsWith("/profile")) && !data.user) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
   if (pathname.startsWith("/admin") && data.user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, school, year_of_study")
+      .select("role, full_name, school, year_of_study")
       .eq("id", data.user.id)
       .single();
 
@@ -41,11 +41,15 @@ export async function proxy(request: NextRequest) {
     if (!isComplete) {
       return NextResponse.redirect(new URL("/onboarding", request.url));
     }
+
+    if (profile?.role !== "admin") {
+      return NextResponse.redirect(new URL("/profile", request.url));
+    }
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/profile/:path*"],
 };

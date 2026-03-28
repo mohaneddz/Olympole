@@ -29,7 +29,12 @@ export default async function ResultsPage() {
             <tbody>
               {results.map((row) => (
                 <tr key={row.id} className="border-b border-card-border/50">
-                  <td className="p-4">{Array.isArray(row.events) ? row.events[0]?.title : row.events?.title}</td>
+                  <td className="p-4">
+                    {(() => {
+                      const event = row.events as { title?: string } | Array<{ title?: string }> | null;
+                      return (Array.isArray(event) ? event[0]?.title : event?.title) ?? "-";
+                    })()}
+                  </td>
                   <td className="p-4">{row.participant_or_team_name}</td>
                   <td className="p-4">#{row.placement}</td>
                   <td className="p-4">{row.medal ?? "-"}</td>

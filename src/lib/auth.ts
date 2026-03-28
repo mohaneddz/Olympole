@@ -5,6 +5,14 @@ import { getAdminEmails } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
+function isMissingTableError(message: string, tableName: string) {
+  const lowered = message.toLowerCase();
+  return (
+    lowered.includes(`public.${tableName}`) &&
+    (lowered.includes("schema cache") || lowered.includes("does not exist"))
+  );
+}
+
 export const getCurrentUser = cache(async () => {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.auth.getUser();
@@ -27,9 +35,35 @@ export const getCurrentProfile = cache(async () => {
   return data;
 });
 
-function isProfilesTableMissingError(message: string) {
-  const lowered = message.toLowerCase();
-  return lowered.includes("public.profiles") && (lowered.includes("schema cache") || lowered.includes("does not exist"));
+export const getCurrentUserRoles = cache(async () => {
+  const user = await getCurrentUser();
+  if (!user) {
+    return [] as string[];
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("profile_roles")
+    .select("role_name")
+    .eq("profile_id", user.id);
+
+  if (error) {
+    // Backward compatible fallback for older schema state.
+    const profile = await getCurrentProfile();
+    return profile?.role ? [profile.role] : [];
+  }
+
+  if (!data?.length) {
+    const profile = await getCurrentProfile();
+    return profile?.role ? [profile.role] : [];
+  }
+
+  return data.map((row) => row.role_name);
+});
+
+export async function isCurrentUserAdmin() {
+  const roles = await getCurrentUserRoles();
+  return roles.includes("admin");
 }
 
 export async function syncAdminRole(user: User) {
@@ -37,20 +71,34 @@ export async function syncAdminRole(user: User) {
   const email = user.email?.toLowerCase() ?? "";
   const isAdmin = getAdminEmails().includes(email);
 
-  const { error } = await supabase.from("profiles").upsert({
+  const { error: profileError } = await supabase.from("profiles").upsert({
     id: user.id,
     email: email || `${user.id}@unknown.local`,
     full_name: user.user_metadata?.full_name ?? null,
     role: isAdmin ? "admin" : "participant",
+    last_seen_at: new Date().toISOString(),
   });
 
-  if (error) {
-    if (isProfilesTableMissingError(error.message)) {
+  if (profileError) {
+    if (isMissingTableError(profileError.message, "profiles")) {
       console.warn("Profiles table is missing. Apply Supabase migrations to enable role sync.");
       return { synced: false as const, reason: "profiles_table_missing" as const };
     }
 
-    throw new Error(`Failed to sync profile: ${error.message}`);
+    throw new Error(`Failed to sync profile: ${profileError.message}`);
+  }
+
+  const roleLabel = isAdmin ? "admin" : "participant";
+  const { error: roleError } = await supabase.from("profile_roles").upsert(
+    {
+      profile_id: user.id,
+      role_name: roleLabel,
+    },
+    { onConflict: "profile_id,role_name" }
+  );
+
+  if (roleError && !isMissingTableError(roleError.message, "profile_roles")) {
+    throw new Error(`Failed to sync user roles: ${roleError.message}`);
   }
 
   return { synced: true as const };
@@ -65,7 +113,7 @@ export async function getProfileCompletionStatus(userId: string) {
     .single();
 
   if (error) {
-    if (isProfilesTableMissingError(error.message)) {
+    if (isMissingTableError(error.message, "profiles")) {
       return { ready: false as const, reason: "profiles_table_missing" as const };
     }
     return { ready: false as const, reason: "unknown" as const };
@@ -82,20 +130,23 @@ export async function requireAuth() {
   if (!user) {
     redirect("/login");
   }
+
   await syncAdminRole(user);
+
+  const supabase = await createSupabaseServerClient();
+  await supabase
+    .from("profiles")
+    .update({ last_seen_at: new Date().toISOString() })
+    .eq("id", user.id);
+
   return user;
 }
 
 export async function requireAdmin() {
   const user = await requireAuth();
-  const supabase = await createSupabaseServerClient();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  const roles = await getCurrentUserRoles();
 
-  if (!profile || profile.role !== "admin") {
+  if (!roles.includes("admin")) {
     redirect("/");
   }
 

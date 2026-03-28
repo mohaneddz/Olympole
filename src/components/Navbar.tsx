@@ -7,6 +7,7 @@ const navItems = [
   { name: "Home", href: "/" },
   { name: "Sports", href: "/sports" },
   { name: "Culture", href: "/culture" },
+  { name: "Live", href: "/live" },
   { name: "Schedule", href: "/schedule" },
   { name: "Predictions", href: "/predictions" },
 ];
@@ -36,9 +37,11 @@ export async function Navbar() {
 
         <div className="relative z-10 flex flex-1 items-center justify-end gap-3">
           {profile ? (
-            <Button variant="neonPill" size="pill" asChild>
-              <Link href="/profile">Profile</Link>
-            </Button>
+            <>
+              <Button variant="neonPill" size="pill" asChild>
+                <Link href="/profile">Profile</Link>
+              </Button>
+            </>
           ) : (
             <Button variant="neonPill" size="pill" asChild>
               <Link href="/login">Login</Link>

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { voteSubmissionAction } from "@/app/actions/writing";
 import { WritingSubmissionForm } from "@/components/forms/WritingSubmissionForm";
+import { VoteSubmissionButton } from "@/components/forms/VoteSubmissionButton";
 import { getCurrentUser } from "@/lib/auth";
 import { getAppSettings, getPublishedWritingSubmissions, getWritingVoteCounts } from "@/lib/queries";
 
@@ -50,10 +50,7 @@ export default async function WritingContestPage() {
                 <div className="mt-6 flex items-center justify-between">
                   <span className="text-sm text-indigo-300">{votes} votes</span>
                   {user ? (
-                    <form action={voteSubmissionAction}>
-                      <input type="hidden" name="submission_id" value={entry.id} />
-                      <button className="px-3 py-2 rounded border border-indigo-500/40 hover:border-indigo-400">Vote</button>
-                    </form>
+                    <VoteSubmissionButton submissionId={entry.id} />
                   ) : null}
                 </div>
               </div>

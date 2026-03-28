@@ -13,6 +13,18 @@ const loginSchema = z.object({
 
 const signupSchema = loginSchema.extend({
   full_name: z.string().min(2).max(120).optional(),
+  username: z
+    .string()
+    .regex(/^[a-zA-Z0-9_]{3,32}$/)
+    .optional(),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters long.")
+    .max(120)
+    .refine(
+      (value) => /[a-z]/.test(value) && /[A-Z]/.test(value) && /\d/.test(value),
+      "Password must include uppercase, lowercase, and a number."
+    ),
 });
 
 export async function signInAction(_: ActionResponse, formData: FormData): Promise<ActionResponse> {
@@ -42,12 +54,19 @@ export async function signInAction(_: ActionResponse, formData: FormData): Promi
     redirect("/onboarding");
   }
 
-  redirect("/admin");
+  const { data: roles } = await supabase
+    .from("profile_roles")
+    .select("role_name")
+    .eq("profile_id", data.user.id);
+
+  const isAdmin = (roles ?? []).some((row) => row.role_name === "admin");
+  redirect(isAdmin ? "/admin" : "/profile");
 }
 
 export async function signUpAction(_: ActionResponse, formData: FormData): Promise<ActionResponse> {
   const parsed = signupSchema.safeParse({
     full_name: formData.get("full_name") || undefined,
+    username: formData.get("username") || undefined,
     email: formData.get("email"),
     password: formData.get("password"),
   });
@@ -63,6 +82,7 @@ export async function signUpAction(_: ActionResponse, formData: FormData): Promi
     options: {
       data: {
         full_name: parsed.data.full_name ?? null,
+        username: parsed.data.username ?? null,
       },
     },
   });

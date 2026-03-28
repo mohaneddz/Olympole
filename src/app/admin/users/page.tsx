@@ -7,7 +7,7 @@ export default async function AdminUsersPage() {
   const supabase = await createSupabaseServerClient();
   const { data: registrations } = await supabase
     .from("registrations")
-    .select("id, full_name, email, category_type, status, created_at")
+    .select("id, full_name, email, category_type, status, attendance_status, created_at, events(title)")
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -21,17 +21,25 @@ export default async function AdminUsersPage() {
               <th className="p-3">Name</th>
               <th className="p-3">Email</th>
               <th className="p-3">Category</th>
+              <th className="p-3">Event</th>
               <th className="p-3">Status</th>
+              <th className="p-3">Attendance</th>
               <th className="p-3">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {(registrations ?? []).map((row) => (
+            {(registrations ?? []).map((row) => {
+              const event = row.events as { title?: string } | Array<{ title?: string }> | null;
+              const eventTitle = Array.isArray(event) ? event[0]?.title : event?.title;
+
+              return (
               <tr key={row.id} className="border-b border-card-border/50">
                 <td className="p-3">{row.full_name}</td>
                 <td className="p-3">{row.email}</td>
                 <td className="p-3">{row.category_type}</td>
+                <td className="p-3">{eventTitle ?? "-"}</td>
                 <td className="p-3">{row.status}</td>
+                <td className="p-3">{row.attendance_status}</td>
                 <td className="p-3">
                   <div className="flex gap-2">
                     {(["pending", "approved", "rejected"] as const).map((status) => (
@@ -44,7 +52,7 @@ export default async function AdminUsersPage() {
                   </div>
                 </td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>

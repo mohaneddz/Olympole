@@ -1,49 +1,83 @@
-import { GlowCard } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import Link from "next/link";
+import { getPublicEvents, getPublicLiveStreams } from "@/lib/queries";
 
-const artworks = [
-    { id: 1, title: "Neural Resonance", artist: "0xViolet", img: "bg-gradient-to-br from-purple-500 to-indigo-500" },
-    { id: 2, title: "Neon Canopy", artist: "Kaelen", img: "bg-gradient-to-tr from-cyan-400 to-blue-600" },
-    { id: 3, title: "Synthetic Soul", artist: "Ghost Protocol", img: "bg-gradient-to-bl from-pink-500 to-rose-500" },
-    { id: 4, title: "Data Stream 9", artist: "Ana_Digi", img: "bg-gradient-to-br from-emerald-400 to-teal-600" },
-    { id: 5, title: "Holo-Memories", artist: "RetroByte", img: "bg-gradient-to-t from-orange-500 to-amber-500" },
-    { id: 6, title: "Void Architecture", artist: "Sigma", img: "bg-[linear-gradient(45deg,rgb(10,10,20),rgb(40,40,60))]" },
-];
+export default async function ArtExhibitionPage() {
+  const [events, liveStreams] = await Promise.all([getPublicEvents(), getPublicLiveStreams()]);
+  const artEvents = events.filter(
+    (event) => {
+      const sport = event.sports as { slug?: string } | Array<{ slug?: string }> | null;
+      const sportSlug = Array.isArray(sport) ? sport[0]?.slug : sport?.slug;
+      return sportSlug === "art-exhibition";
+    }
+  );
 
-export default function ArtExhibitionPage() {
-    return (
-        <div className="container mx-auto px-4 py-16 max-w-7xl flex flex-col gap-8 flex-1">
-            <div className="text-center mb-12">
-                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-secondary glow-text-purple">
-                    Digital Art Exhibition
-                </h1>
-                <p className="text-lg text-foreground/70 max-w-2xl mx-auto">
-                    A curated gallery of the finest generative and hand-crafted digital masterpieces of 2026.
-                </p>
-            </div>
+  const artStreams = liveStreams.filter((stream) => {
+    const linkedEventRelation = stream.events as { slug?: string } | Array<{ slug?: string }> | null;
+    const linkedEvent = Array.isArray(linkedEventRelation) ? linkedEventRelation[0] : linkedEventRelation;
+    return linkedEvent?.slug === "art-exhibition-2026";
+  });
 
-            <div className="flex justify-center gap-4 mb-8">
-                <Button variant="default" className="bg-secondary hover:bg-secondary/80 text-white rounded-full px-6">All Works</Button>
-                <Button variant="ghost" className="rounded-full px-6 border border-card-border hover:border-secondary/50">Generative</Button>
-                <Button variant="ghost" className="rounded-full px-6 border border-card-border hover:border-secondary/50">Holographic</Button>
-                <Button variant="ghost" className="rounded-full px-6 border border-card-border hover:border-secondary/50">VR Experiences</Button>
-            </div>
+  return (
+    <div className="container mx-auto px-4 py-16 max-w-6xl flex flex-col gap-8 flex-1">
+      <div className="text-center">
+        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-secondary">
+          Art Exhibition
+        </h1>
+        <p className="text-lg text-foreground/70 max-w-2xl mx-auto">
+          Event metadata, schedule windows, and optional live viewing are powered directly from Supabase.
+        </p>
+      </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                {artworks.map((art) => (
-                    <GlowCard key={art.id} glowColor="purple" className="overflow-hidden group cursor-pointer">
-                        <div className={`w-full h-64 ${art.img} relative`}>
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4">
-                                <Button variant="glow" size="sm">View High-Res</Button>
-                            </div>
-                        </div>
-                        <div className="p-6">
-                            <h3 className="text-xl font-bold mb-1">{art.title}</h3>
-                            <p className="text-secondary text-sm font-medium">by {art.artist}</p>
-                        </div>
-                    </GlowCard>
-                ))}
-            </div>
+      {artEvents.length === 0 ? (
+        <div className="rounded-xl border border-card-border p-6 text-foreground/70">
+          No art exhibition event has been scheduled yet.
         </div>
-    );
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {artEvents.map((event) => (
+            <article key={event.id} className="rounded-xl border border-card-border bg-card-bg/20 p-5 space-y-2">
+              <h2 className="text-xl font-semibold">{event.title}</h2>
+              <p className="text-sm text-foreground/70">{event.description ?? "No description available."}</p>
+              <p className="text-sm text-foreground/60">
+                {new Date(event.starts_at).toLocaleString()} - {new Date(event.ends_at).toLocaleString()}
+              </p>
+              <p className="text-sm text-foreground/60">Venue: {event.venue}</p>
+              <span className="inline-block rounded-full border border-card-border px-2 py-1 text-xs uppercase">
+                {event.status}
+              </span>
+            </article>
+          ))}
+        </div>
+      )}
+
+      <section className="space-y-4">
+        <h2 className="text-2xl font-semibold">Related Live Feeds</h2>
+        {artStreams.length === 0 ? (
+          <p className="text-foreground/70">
+            No dedicated art stream available. Check the{" "}
+            <Link href="/live" className="text-primary underline-offset-4 hover:underline">
+              live page
+            </Link>
+            .
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {artStreams.map((stream) => (
+              <div key={stream.id} className="rounded-xl border border-card-border p-4">
+                <p className="font-medium">{stream.title}</p>
+                <p className="text-sm text-foreground/70">{stream.description ?? "No description."}</p>
+                {stream.playback_url ? (
+                  <Link href={stream.playback_url} target="_blank" className="text-sm text-primary underline-offset-4 hover:underline">
+                    Open playback link
+                  </Link>
+                ) : (
+                  <p className="text-sm text-foreground/60">Playback URL not configured.</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
 }
