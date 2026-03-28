@@ -10,6 +10,10 @@ This version is a working MVP built on Next.js 16 + Supabase with:
 - predictions (winner-pick with scoring)
 - writing submissions + voting + admin moderation
 - runtime feature toggles
+- profile management page
+- sports/team management
+- live stream management + public live page
+- multi-event enrollment
 
 ## Stack
 
@@ -54,6 +58,12 @@ Apply migration to remote:
 supabase db push --db-url "$SUPABASE_CONNECTION_STRING"
 ```
 
+Seed realistic sample data (sports, teams, events, matches, results, streams):
+
+```bash
+supabase db reset --db-url "$SUPABASE_CONNECTION_STRING"
+```
+
 If you cannot resolve `db.<project-ref>.supabase.co`, verify your connection string and DNS/network access.
 
 ## Run
@@ -79,6 +89,8 @@ Public:
 - `/match-center`
 - `/predictions`
 - `/register`
+- `/profile`
+- `/live`
 - `/culture/*`
 - `/login`
 
@@ -86,6 +98,8 @@ Admin (protected):
 - `/admin`
 - `/admin/users`
 - `/admin/events`
+- `/admin/sports`
+- `/admin/live`
 - `/admin/system`
 - `/admin/settings`
 

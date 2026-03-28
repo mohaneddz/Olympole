@@ -3,9 +3,41 @@
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireAdmin } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { eventSchema, matchSchema, resultSchema } from "@/lib/validators";
+import {
+  eventSchema,
+  liveStreamSchema,
+  matchSchema,
+  resultSchema,
+  sportSchema,
+  teamSchema,
+} from "@/lib/validators";
 
-async function logAdmin(action: string, entityType: string, entityId: string | null) {
+function toBoolean(value: FormDataEntryValue | null, fallback = false) {
+  if (value === null) {
+    return fallback;
+  }
+  return String(value) === "true";
+}
+
+function toOptionalNumber(value: FormDataEntryValue | null) {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function toIsoString(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+async function logAdmin(
+  action: string,
+  entityType: string,
+  entityId: string | null,
+  payload?: Record<string, unknown>
+) {
   const user = await getCurrentUser();
   if (!user) {
     return;
@@ -17,10 +49,11 @@ async function logAdmin(action: string, entityType: string, entityId: string | n
     action,
     entity_type: entityType,
     entity_id: entityId,
+    payload: payload ?? null,
   });
 }
 
-export async function createEventAction(formData: FormData) {
+export async function createEventAction(formData: FormData): Promise<void> {
   await requireAdmin();
 
   const parsed = eventSchema.safeParse({
@@ -33,6 +66,13 @@ export async function createEventAction(formData: FormData) {
     ends_at: formData.get("ends_at"),
     status: formData.get("status"),
     description: formData.get("description"),
+    sport_id: formData.get("sport_id"),
+    registration_deadline: formData.get("registration_deadline"),
+    max_participants: toOptionalNumber(formData.get("max_participants")),
+    is_registration_open: toBoolean(formData.get("is_registration_open"), true),
+    is_featured: toBoolean(formData.get("is_featured"), false),
+    visibility: formData.get("visibility") || "public",
+    current_round: formData.get("current_round"),
   });
 
   if (!parsed.success) {
@@ -40,18 +80,43 @@ export async function createEventAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("events")
-    .insert({ ...parsed.data, description: parsed.data.description || null })
+    .insert({
+      title: parsed.data.title,
+      slug: parsed.data.slug,
+      type: parsed.data.type,
+      category: parsed.data.category,
+      venue: parsed.data.venue,
+      starts_at: toIsoString(parsed.data.starts_at),
+      ends_at: toIsoString(parsed.data.ends_at),
+      status: parsed.data.status,
+      description: parsed.data.description || null,
+      sport_id: parsed.data.sport_id || null,
+      registration_deadline: parsed.data.registration_deadline
+        ? toIsoString(parsed.data.registration_deadline)
+        : null,
+      max_participants: parsed.data.max_participants ?? null,
+      is_registration_open: parsed.data.is_registration_open ?? true,
+      is_featured: parsed.data.is_featured ?? false,
+      visibility: parsed.data.visibility ?? "public",
+      current_round: parsed.data.current_round || null,
+    })
     .select("id")
     .single();
 
-  await logAdmin("event_create", "event", data?.id ?? null);
+  if (error) {
+    return;
+  }
+
+  await logAdmin("event_create", "event", data?.id ?? null, { slug: parsed.data.slug });
   revalidatePath("/admin/events");
+  revalidatePath("/admin/sports");
   revalidatePath("/schedule");
+  revalidatePath("/sports");
 }
 
-export async function deleteEventAction(formData: FormData) {
+export async function deleteEventAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
   if (!id) {
@@ -59,14 +124,18 @@ export async function deleteEventAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  await supabase.from("events").delete().eq("id", id);
+  const { error } = await supabase.from("events").delete().eq("id", id);
+  if (error) {
+    return;
+  }
 
   await logAdmin("event_delete", "event", id);
   revalidatePath("/admin/events");
   revalidatePath("/schedule");
+  revalidatePath("/sports");
 }
 
-export async function createMatchAction(formData: FormData) {
+export async function createMatchAction(formData: FormData): Promise<void> {
   await requireAdmin();
 
   const parsed = matchSchema.safeParse({
@@ -80,23 +149,66 @@ export async function createMatchAction(formData: FormData) {
     round: formData.get("round"),
     venue: formData.get("venue"),
     starts_at: formData.get("starts_at"),
+    team_a_id: formData.get("team_a_id"),
+    team_b_id: formData.get("team_b_id"),
+    event_phase: formData.get("event_phase"),
+    mvp_player: formData.get("mvp_player"),
+    live_minute: toOptionalNumber(formData.get("live_minute")),
+    is_prediction_locked: toBoolean(formData.get("is_prediction_locked"), false),
+    notes: formData.get("notes"),
   });
 
   if (!parsed.success) {
     return;
   }
 
+  const winningTeamId =
+    parsed.data.status === "completed"
+      ? parsed.data.score_a > parsed.data.score_b
+        ? parsed.data.team_a_id || null
+        : parsed.data.score_b > parsed.data.score_a
+          ? parsed.data.team_b_id || null
+          : null
+      : null;
+
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.from("matches").insert(parsed.data).select("id").single();
+  const { data, error } = await supabase
+    .from("matches")
+    .insert({
+      event_id: parsed.data.event_id,
+      sport: parsed.data.sport,
+      team_a: parsed.data.team_a,
+      team_b: parsed.data.team_b,
+      score_a: parsed.data.score_a,
+      score_b: parsed.data.score_b,
+      status: parsed.data.status,
+      round: parsed.data.round,
+      venue: parsed.data.venue,
+      starts_at: toIsoString(parsed.data.starts_at),
+      team_a_id: parsed.data.team_a_id || null,
+      team_b_id: parsed.data.team_b_id || null,
+      event_phase: parsed.data.event_phase || "group",
+      mvp_player: parsed.data.mvp_player || null,
+      live_minute: parsed.data.live_minute ?? null,
+      is_prediction_locked: parsed.data.is_prediction_locked ?? false,
+      notes: parsed.data.notes || null,
+      winning_team_id: winningTeamId,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    return;
+  }
 
   await logAdmin("match_create", "match", data?.id ?? null);
   revalidatePath("/admin/events");
   revalidatePath("/match-center");
+  revalidatePath("/predictions");
 }
 
-export async function updateMatchAction(formData: FormData) {
+export async function updateMatchAction(formData: FormData): Promise<void> {
   await requireAdmin();
-
   const id = String(formData.get("id") ?? "");
   if (!id) {
     return;
@@ -113,22 +225,65 @@ export async function updateMatchAction(formData: FormData) {
     round: formData.get("round"),
     venue: formData.get("venue"),
     starts_at: formData.get("starts_at"),
+    team_a_id: formData.get("team_a_id"),
+    team_b_id: formData.get("team_b_id"),
+    event_phase: formData.get("event_phase"),
+    mvp_player: formData.get("mvp_player"),
+    live_minute: toOptionalNumber(formData.get("live_minute")),
+    is_prediction_locked: toBoolean(formData.get("is_prediction_locked"), false),
+    notes: formData.get("notes"),
   });
 
   if (!payload.success) {
     return;
   }
 
+  const winningTeamId =
+    payload.data.status === "completed"
+      ? payload.data.score_a > payload.data.score_b
+        ? payload.data.team_a_id || null
+        : payload.data.score_b > payload.data.score_a
+          ? payload.data.team_b_id || null
+          : null
+      : null;
+
   const supabase = await createSupabaseServerClient();
-  await supabase.from("matches").update(payload.data).eq("id", id);
+  const { error } = await supabase
+    .from("matches")
+    .update({
+      event_id: payload.data.event_id,
+      sport: payload.data.sport,
+      team_a: payload.data.team_a,
+      team_b: payload.data.team_b,
+      score_a: payload.data.score_a,
+      score_b: payload.data.score_b,
+      status: payload.data.status,
+      round: payload.data.round,
+      venue: payload.data.venue,
+      starts_at: toIsoString(payload.data.starts_at),
+      team_a_id: payload.data.team_a_id || null,
+      team_b_id: payload.data.team_b_id || null,
+      event_phase: payload.data.event_phase || "group",
+      mvp_player: payload.data.mvp_player || null,
+      live_minute: payload.data.live_minute ?? null,
+      is_prediction_locked: payload.data.is_prediction_locked ?? false,
+      notes: payload.data.notes || null,
+      winning_team_id: winningTeamId,
+    })
+    .eq("id", id);
+
+  if (error) {
+    return;
+  }
 
   await logAdmin("match_update", "match", id);
   revalidatePath("/admin/events");
   revalidatePath("/match-center");
   revalidatePath("/results");
+  revalidatePath("/predictions");
 }
 
-export async function createResultAction(formData: FormData) {
+export async function createResultAction(formData: FormData): Promise<void> {
   await requireAdmin();
 
   const parsed = resultSchema.safeParse({
@@ -146,10 +301,12 @@ export async function createResultAction(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const medal = parsed.data.medal === "none" ? null : parsed.data.medal;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("results")
     .insert({
-      ...parsed.data,
+      event_id: parsed.data.event_id,
+      participant_or_team_name: parsed.data.participant_or_team_name,
+      placement: parsed.data.placement,
       medal,
       score_summary: parsed.data.score_summary || null,
       published_at: new Date().toISOString(),
@@ -157,14 +314,17 @@ export async function createResultAction(formData: FormData) {
     .select("id")
     .single();
 
+  if (error) {
+    return;
+  }
+
   await logAdmin("result_create", "result", data?.id ?? null);
   revalidatePath("/admin/events");
   revalidatePath("/results");
 }
 
-export async function scoreMatchPredictionsAction(formData: FormData) {
+export async function scoreMatchPredictionsAction(formData: FormData): Promise<void> {
   await requireAdmin();
-
   const matchId = String(formData.get("match_id") ?? "");
   if (!matchId) {
     return;
@@ -173,7 +333,7 @@ export async function scoreMatchPredictionsAction(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const { data: match } = await supabase
     .from("matches")
-    .select("id, team_a, team_b, score_a, score_b, status")
+    .select("id, team_a, team_b, score_a, score_b, status, mvp_player")
     .eq("id", matchId)
     .single();
 
@@ -181,19 +341,251 @@ export async function scoreMatchPredictionsAction(formData: FormData) {
     return;
   }
 
-  const winner = match.score_a === match.score_b ? "DRAW" : match.score_a > match.score_b ? match.team_a : match.team_b;
+  const winner =
+    match.score_a === match.score_b
+      ? "DRAW"
+      : match.score_a > match.score_b
+        ? match.team_a
+        : match.team_b;
 
-  const { data: predictions } = await supabase
+  const { data: predictions, error } = await supabase
     .from("predictions")
-    .select("id, predicted_winner")
+    .select("id, predicted_winner, predicted_score_a, predicted_score_b, predicted_mvp_player, stake_points")
     .eq("match_id", matchId);
 
+  if (error) {
+    return;
+  }
+
   for (const prediction of predictions ?? []) {
-    const points = prediction.predicted_winner === winner ? 3 : 0;
-    await supabase.from("predictions").update({ points_awarded: points }).eq("id", prediction.id);
+    const winnerPoints = prediction.predicted_winner === winner ? 3 : 0;
+    const exactScorePoints =
+      prediction.predicted_score_a === match.score_a && prediction.predicted_score_b === match.score_b ? 2 : 0;
+    const mvpPoints =
+      match.mvp_player &&
+      prediction.predicted_mvp_player &&
+      prediction.predicted_mvp_player.trim().toLowerCase() === match.mvp_player.trim().toLowerCase()
+        ? 1
+        : 0;
+
+    const basePoints = winnerPoints + exactScorePoints + mvpPoints;
+    const totalPoints = basePoints * Math.max(1, prediction.stake_points ?? 1);
+
+    await supabase
+      .from("predictions")
+      .update({
+        points_awarded: totalPoints,
+        outcome: basePoints > 0 ? "won" : "lost",
+      })
+      .eq("id", prediction.id);
   }
 
   await logAdmin("prediction_score_rerun", "match", matchId);
   revalidatePath("/predictions");
+  revalidatePath("/profile");
   revalidatePath("/admin/events");
+}
+
+export async function createSportAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const parsed = sportSchema.safeParse({
+    name: formData.get("name"),
+    slug: formData.get("slug"),
+    sport_type: formData.get("sport_type"),
+    is_team_based: toBoolean(formData.get("is_team_based"), false),
+    gender_division: formData.get("gender_division"),
+    description: formData.get("description"),
+    is_active: toBoolean(formData.get("is_active"), true),
+  });
+
+  if (!parsed.success) {
+    return;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("sports")
+    .upsert(
+      {
+        name: parsed.data.name,
+        slug: parsed.data.slug,
+        sport_type: parsed.data.sport_type,
+        is_team_based: parsed.data.is_team_based ?? false,
+        gender_division: parsed.data.gender_division || "mixed",
+        description: parsed.data.description || null,
+        is_active: parsed.data.is_active ?? true,
+      },
+      { onConflict: "slug" }
+    )
+    .select("id")
+    .single();
+
+  if (error) {
+    return;
+  }
+
+  await logAdmin("sport_upsert", "sport", data?.id ?? null);
+  revalidatePath("/admin/sports");
+  revalidatePath("/sports");
+  revalidatePath("/register");
+}
+
+export async function deleteSportAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) {
+    return;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("sports").delete().eq("id", id);
+  if (error) {
+    return;
+  }
+
+  await logAdmin("sport_delete", "sport", id);
+  revalidatePath("/admin/sports");
+  revalidatePath("/sports");
+  revalidatePath("/register");
+}
+
+export async function createTeamAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const parsed = teamSchema.safeParse({
+    sport_id: formData.get("sport_id"),
+    name: formData.get("name"),
+    short_code: formData.get("short_code"),
+    city: formData.get("city"),
+    coach_name: formData.get("coach_name"),
+  });
+
+  if (!parsed.success) {
+    return;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("teams")
+    .upsert(
+      {
+        sport_id: parsed.data.sport_id,
+        name: parsed.data.name,
+        short_code: parsed.data.short_code || null,
+        city: parsed.data.city || null,
+        coach_name: parsed.data.coach_name || null,
+      },
+      { onConflict: "sport_id,name" }
+    )
+    .select("id")
+    .single();
+
+  if (error) {
+    return;
+  }
+
+  await logAdmin("team_upsert", "team", data?.id ?? null);
+  revalidatePath("/admin/sports");
+  revalidatePath("/sports");
+}
+
+export async function deleteTeamAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) {
+    return;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("teams").delete().eq("id", id);
+  if (error) {
+    return;
+  }
+
+  await logAdmin("team_delete", "team", id);
+  revalidatePath("/admin/sports");
+  revalidatePath("/sports");
+}
+
+export async function createLiveStreamAction(formData: FormData): Promise<void> {
+  const adminUser = await requireAdmin();
+  const parsed = liveStreamSchema.safeParse({
+    title: formData.get("title"),
+    description: formData.get("description"),
+    event_id: formData.get("event_id"),
+    playback_url: formData.get("playback_url"),
+    status: formData.get("status"),
+    access: formData.get("access"),
+    starts_at: formData.get("starts_at"),
+    ends_at: formData.get("ends_at"),
+  });
+
+  if (!parsed.success) {
+    return;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("live_streams")
+    .insert({
+      title: parsed.data.title,
+      description: parsed.data.description || null,
+      event_id: parsed.data.event_id || null,
+      host_profile_id: adminUser.id,
+      playback_url: parsed.data.playback_url || null,
+      status: parsed.data.status,
+      access: parsed.data.access,
+      starts_at: parsed.data.starts_at ? toIsoString(parsed.data.starts_at) : null,
+      ends_at: parsed.data.ends_at ? toIsoString(parsed.data.ends_at) : null,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    return;
+  }
+
+  await logAdmin("live_stream_create", "live_stream", data?.id ?? null);
+  revalidatePath("/admin/live");
+  revalidatePath("/live");
+}
+
+export async function updateLiveStreamStatusAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const status = String(formData.get("status") ?? "");
+  if (!id || !["draft", "live", "ended"].includes(status)) {
+    return;
+  }
+
+  const payload: Record<string, unknown> = { status };
+  if (status === "live") payload.starts_at = new Date().toISOString();
+  if (status === "ended") payload.ends_at = new Date().toISOString();
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("live_streams").update(payload).eq("id", id);
+  if (error) {
+    return;
+  }
+
+  await logAdmin(`live_stream_${status}`, "live_stream", id);
+  revalidatePath("/admin/live");
+  revalidatePath("/live");
+}
+
+export async function deleteLiveStreamAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) {
+    return;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("live_streams").delete().eq("id", id);
+  if (error) {
+    return;
+  }
+
+  await logAdmin("live_stream_delete", "live_stream", id);
+  revalidatePath("/admin/live");
+  revalidatePath("/live");
 }

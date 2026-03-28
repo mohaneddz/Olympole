@@ -9,7 +9,11 @@ export async function updateSettingAction(formData: FormData) {
   await requireAdmin();
 
   const key = String(formData.get("key") ?? "");
-  const value = String(formData.get("value") ?? "") === "true";
+  const rawValue = String(formData.get("value") ?? "");
+  const value =
+    key === "registration_max_events_per_user"
+      ? Number(rawValue)
+      : rawValue === "true";
 
   const parsed = appSettingSchema.safeParse({ key, value });
   if (!parsed.success) {
@@ -23,4 +27,5 @@ export async function updateSettingAction(formData: FormData) {
   revalidatePath("/register");
   revalidatePath("/predictions");
   revalidatePath("/culture/writing");
+  revalidatePath("/live");
 }
