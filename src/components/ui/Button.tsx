@@ -4,19 +4,19 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-95",
   {
     variants: {
       variant: {
-        default: "bg-primary text-black hover:bg-primary/90 glow-border-cyan",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-white hover:bg-secondary/80 glow-border-purple",
+        default: "bg-primary text-black hover:bg-primary/90 glow-border-cyan hover:scale-105 hover:brightness-110",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:scale-105",
+        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:scale-105",
+        secondary: "bg-secondary text-white hover:bg-secondary/80 glow-border-purple hover:scale-105 hover:brightness-110",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        glow: "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-[0_0_15px_rgba(0,240,255,0.5)] hover:shadow-[0_0_25px_rgba(0,240,255,0.8)] border border-cyan-400",
+        glow: "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-[0_0_15px_rgba(0,240,255,0.5)] hover:shadow-[0_0_25px_rgba(0,240,255,0.8)] border border-cyan-400 hover:scale-105 hover:brightness-110",
         neonPill:
-          "rounded-full border border-cyan-300/70 bg-cyan-400/10 text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.25),0_0_18px_rgba(34,211,238,0.4)] backdrop-blur-md transition-all hover:bg-cyan-300/15 hover:text-white hover:shadow-[0_0_0_1px_rgba(34,211,238,0.45),0_0_28px_rgba(34,211,238,0.7)]",
+          "rounded-full border border-cyan-300/70 bg-cyan-400/10 text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.25),0_0_18px_rgba(34,211,238,0.4)] backdrop-blur-md transition-all hover:bg-cyan-300/15 hover:text-white hover:shadow-[0_0_0_1px_rgba(34,211,238,0.45),0_0_28px_rgba(34,211,238,0.7)] hover:-translate-y-1 hover:brightness-110 hover:scale-[1.02]",
       },
       size: {
         default: "h-10 px-4 py-2",
