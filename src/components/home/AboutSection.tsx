@@ -3,7 +3,7 @@ import { EVENT_STATS } from "@/data/event";
 
 export function AboutSection() {
   return (
-    <section id="about" className="relative z-10 flex min-h-screen items-center bg-[#030b2b] py-14 md:py-20">
+    <section id="about" className="relative z-10 flex min-h-screen scroll-mt-20 items-center overflow-hidden bg-[#030b2b] py-14 md:py-20">
       <Image
         src="/svgs/artifacts/yellow-zigzag.svg"
         alt=""

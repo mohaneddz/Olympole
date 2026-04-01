@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+// import Link from "next/link";
 import { useState } from "react";
-import { SPORTS, SPORTS_DECORATIVE_ELEMENTS, SportCategory } from "@/data/sports";
+import { SPORTS, SportCategory } from "@/data/sports";
+import { SHARED_DECORATIVE_ELEMENTS } from "@/data/decoration";
 import SportCard from "@/components/sports/SportCard";
 
 /* ───────── component ───────── */
@@ -25,8 +26,12 @@ export default function SportsPage() {
             priority
             className="object-cover"
           />
-          {/* Subtle overlay to make text pop, but NO bottom fade */}
-          <div className="absolute inset-0 bg-black/10 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,rgba(5,5,15,0.4)_80%,rgba(5,5,15,0.5)_100%)] z-0" />
+          <div className="absolute inset-0 bg-background/10 backdrop-blur-[1px]" />
+          {/* Cyber lines pattern */}
+          <div className="absolute inset-0 opacity-[0.03]"
+            style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '40px 40px' }}
+          />
         </div>
 
         <div className="container relative z-10 mx-auto flex flex-col items-center justify-center gap-4 px-4 text-center">
@@ -48,7 +53,7 @@ export default function SportsPage() {
           />
           <h1 className="font-heading text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8">
             <span
-              className="text-white"
+              className="text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60"
             >
               AVAILABLE SPORTS
             </span>
@@ -82,9 +87,9 @@ export default function SportsPage() {
         </div>
 
         {/* ── Cards grid ── */}
-        <section className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-20 flex flex-col gap-20">
+        <section className=" z-10 mx-auto w-full max-w-7xl px-4 pb-20 flex flex-col gap-20">
           {/* Decorative floating elements */}
-          {SPORTS_DECORATIVE_ELEMENTS.map((el, i) => (
+          {SHARED_DECORATIVE_ELEMENTS.map((el, i: number) => (
             <Image
               key={i}
               src={el.src}
