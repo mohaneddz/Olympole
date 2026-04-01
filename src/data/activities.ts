@@ -24,7 +24,7 @@ export const ACTIVITY_COLUMNS: ActivityColumn[] = [
     heading: "text-[#f2acd9]",
     rowBg: "bg-[#ef8dd6]",
     text: "text-[#120920]",
-    button: "border-[#3d243a] text-[#1a1026]",
+    button: "border-[#3d243a] text-[#1a1026] hover:bg-[#3d243a] hover:text-[#ef8dd6]",
     items: [
       { name: "Football", href: "/register" },
       { name: "Basketball", href: "/register" },
@@ -39,7 +39,7 @@ export const ACTIVITY_COLUMNS: ActivityColumn[] = [
     heading: "text-[#eef15b]",
     rowBg: "bg-[#ecec65]",
     text: "text-[#181717]",
-    button: "border-[#46412b] text-[#1d1b12]",
+    button: "border-[#46412b] text-[#1d1b12] hover:bg-[#46412b] hover:text-[#ecec65]",
     items: [
       { name: "Swimming", href: "/register" },
       { name: "Tennis", href: "/register" },
@@ -54,7 +54,7 @@ export const ACTIVITY_COLUMNS: ActivityColumn[] = [
     heading: "text-[#90edff]",
     rowBg: "bg-[#13c8e5]",
     text: "text-white",
-    button: "border-white text-white",
+    button: "border-white text-white hover:bg-white hover:text-[#13c8e5]",
     items: [
       { name: "Talent Show", href: "/culture/talent" },
       { name: "Knowledge Cup", href: "/culture" },

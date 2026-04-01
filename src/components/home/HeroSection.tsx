@@ -1,8 +1,21 @@
-import Link from "next/link";
+"use client";
+
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 
 export function HeroSection() {
+  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    const element = document.getElementById(id);
+    if (element) {
+      // scroll-margin-top is already set on sections, so we can use smooth scroll directly
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      // Update URL hash without jumping
+      window.history.pushState(null, "", `#${id}`);
+    }
+  };
+
   return (
     <section className="relative flex min-h-[calc(100vh-4rem)] w-full flex-col items-center justify-center overflow-hidden">
       {/* Abstract Background Elements */}
@@ -43,10 +56,14 @@ export function HeroSection() {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
           <Button variant="hero" size="pill" className="w-[18rem] text-2xl h-16" asChild>
-            <Link href="#about">About OLYMPOLE</Link>
+            <a href="#about" onClick={(e) => scrollToSection(e, "about")}>
+              About OLYMPOLE
+            </a>
           </Button>
           <Button variant="hero" size="pill" className="w-[18rem] text-2xl h-16" asChild>
-            <Link href="#activities">Explore Activities</Link>
+            <a href="#activities" onClick={(e) => scrollToSection(e, "activities")}>
+              Explore Activities
+            </a>
           </Button>
         </div>
       </div>
