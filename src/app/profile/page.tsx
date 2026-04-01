@@ -1,8 +1,35 @@
-import Link from "next/link";
 import { ProfileSettingsForm } from "@/components/forms/ProfileSettingsForm";
-import { Button } from "@/components/ui/Button";
+import { ActivityPanel } from "@/components/profile/ActivityPanel";
+import { ProfileHeaderCard } from "@/components/profile/ProfileHeaderCard";
+import Link from "next/link";
 import { requireAuth, getCurrentProfile, getCurrentUserRoles } from "@/lib/auth";
 import { getUserPredictions, getUserRegistrations } from "@/lib/queries";
+import { Shield } from "lucide-react";
+
+function schoolLabel(value: string | null | undefined) {
+  if (!value) {
+    return "School not set";
+  }
+
+  if (value === "ENSIA") {
+    return "Ecole Nationale Superieure d'Informatique";
+  }
+
+  return value;
+}
+
+function initialsFromName(name: string | null, fallback: string) {
+  if (name?.trim()) {
+    return name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("");
+  }
+
+  return fallback.slice(0, 2).toUpperCase();
+}
 
 export default async function ProfilePage() {
   const user = await requireAuth();
@@ -13,143 +40,90 @@ export default async function ProfilePage() {
     getUserPredictions(user.id),
   ]);
 
+  const displayName = profile?.full_name ?? "Participant";
+  const displayEmail = profile?.email ?? user.email ?? "Unknown email";
+  const initials = initialsFromName(profile?.full_name ?? null, displayEmail);
+  const school = schoolLabel(profile?.school);
+  const timezone = profile?.timezone || "Africa/Algiers";
+  const yearLabel = profile?.year_of_study ?? "";
+  const isAdmin = roles.includes("admin");
+
+  const activityPredictions = predictions.map((prediction) => {
+    const matchRelation = prediction.matches as
+      | { team_a?: string; team_b?: string }
+      | Array<{ team_a?: string; team_b?: string }>
+      | null;
+    const match = Array.isArray(matchRelation) ? matchRelation[0] : matchRelation;
+    return {
+      id: prediction.id,
+      matchLabel: `${match?.team_a ?? "Team A"} vs ${match?.team_b ?? "Team B"}`,
+      picked: prediction.predicted_winner,
+      outcome: prediction.outcome,
+      points: prediction.points_awarded ?? 0,
+      createdAt: prediction.created_at,
+    };
+  });
+
+  const activityRegistrations = registrations.map((registration) => {
+    const event = Array.isArray(registration.events) ? registration.events[0] : registration.events;
+    return {
+      id: registration.id,
+      title: event?.title ?? "Unknown event",
+      startsAt: event?.starts_at ? new Date(event.starts_at).toLocaleString() : "Date TBD",
+      venue: event?.venue ?? "Venue TBD",
+      status: registration.status,
+    };
+  });
+
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-12 space-y-8 flex-1">
-      <div className="space-y-2">
-        <h1 className="text-4xl font-bold">Your Profile</h1>
-        <p className="text-foreground/70">
-          Manage account information, track registrations, and monitor your prediction performance.
-        </p>
-      </div>
+    <div className="w-full min-h-screen">
+      <div className="mx-auto w-full max-w-7xl px-4 py-10 md:py-14">
+        <ProfileHeaderCard
+          displayName={displayName}
+          displayEmail={displayEmail}
+          schoolLabel={`${profile?.school ?? "School"} - ${school}`}
+          timezone={timezone}
+          yearLabel={yearLabel}
+          avatarUrl={profile?.avatar_url ?? null}
+          initials={initials}
+          registrationsCount={registrations.length}
+          predictionsCount={predictions.length}
+          roleLabel={isAdmin ? "Admin" : "Participant"}
+        />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <ProfileSettingsForm
-            profile={{
-              full_name: profile?.full_name ?? null,
-              school: profile?.school ?? null,
-              year_of_study: profile?.year_of_study ?? null,
-              username: profile?.username ?? null,
-              phone: profile?.phone ?? null,
-              bio: profile?.bio ?? null,
-              timezone: profile?.timezone ?? null,
-            }}
-          />
+        <div className="mt-6 grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12">
+          <section id="profile-info" className="h-full lg:col-span-7">
+            <ProfileSettingsForm
+              profile={{
+                full_name: profile?.full_name ?? null,
+                school: profile?.school ?? null,
+                year_of_study: profile?.year_of_study ?? null,
+                username: profile?.username ?? null,
+                phone: profile?.phone ?? null,
+                bio: profile?.bio ?? null,
+                timezone: profile?.timezone ?? null,
+              }}
+            />
+          </section>
+
+          <section className="h-full lg:col-span-5">
+            <ActivityPanel
+              predictions={activityPredictions}
+              registrations={activityRegistrations}
+            />
+          </section>
         </div>
-
-        <aside className="rounded-xl border border-card-border bg-card-bg/30 p-6 space-y-4">
-          <h2 className="text-xl font-semibold">Account Summary</h2>
-          <p className="text-sm text-foreground/70">
-            Signed in as <span className="text-foreground">{profile?.email ?? user.email}</span>
-          </p>
-          <div className="space-y-2">
-            <p className="text-sm text-foreground/70">Roles</p>
-            <div className="flex flex-wrap gap-2">
-              {roles.length > 0 ? (
-                roles.map((role) => (
-                  <span key={role} className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs uppercase">
-                    {role}
-                  </span>
-                ))
-              ) : (
-                <span className="text-sm text-foreground/60">participant</span>
-              )}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 text-center">
-            <div className="rounded-lg border border-card-border p-3">
-              <p className="text-xs text-foreground/60">Registrations</p>
-              <p className="text-2xl font-semibold">{registrations.length}</p>
-            </div>
-            <div className="rounded-lg border border-card-border p-3">
-              <p className="text-xs text-foreground/60">Predictions</p>
-              <p className="text-2xl font-semibold">{predictions.length}</p>
-            </div>
-          </div>
-          {roles.includes("admin") ? (
-            <div className="rounded-lg border border-cyan-300/40 bg-[linear-gradient(130deg,rgba(6,24,66,0.65),rgba(7,44,74,0.45))] p-4 shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_0_30px_rgba(34,211,238,0.2)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/85">Admin Access</p>
-              <p className="mt-2 text-sm text-cyan-50/90">
-                Manage events, registrations, livestreams, and system settings.
-              </p>
-              <Button className="mt-4 w-full" variant="neonPill" asChild>
-                <Link href="/admin">Open Admin Dashboard</Link>
-              </Button>
-            </div>
-          ) : null}
-        </aside>
       </div>
 
-      <section className="space-y-4">
-        <h2 className="text-2xl font-semibold">Your Registrations</h2>
-        {registrations.length === 0 ? (
-          <div className="rounded-xl border border-card-border p-4 text-foreground/70">
-            No registrations yet.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {registrations.map((registration) => {
-              const event = Array.isArray(registration.events)
-                ? registration.events[0]
-                : registration.events;
-
-              return (
-                <div key={registration.id} className="rounded-xl border border-card-border bg-card-bg/20 p-4 space-y-2">
-                  <p className="font-semibold">{event?.title ?? "Unknown event"}</p>
-                  <p className="text-sm text-foreground/70">
-                    {event?.starts_at ? new Date(event.starts_at).toLocaleString() : "Date TBD"} • {event?.venue ?? "Venue TBD"}
-                  </p>
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    <span className="rounded-full border border-card-border px-2 py-1">
-                      registration: {registration.status}
-                    </span>
-                    <span className="rounded-full border border-card-border px-2 py-1">
-                      attendance: {registration.attendance_status}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-2xl font-semibold">Your Prediction History</h2>
-        {predictions.length === 0 ? (
-          <div className="rounded-xl border border-card-border p-4 text-foreground/70">
-            No predictions yet.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {predictions.slice(0, 20).map((prediction) => {
-              const matchRelation = prediction.matches as
-                | { team_a?: string; team_b?: string }
-                | Array<{ team_a?: string; team_b?: string }>
-                | null;
-              const match = Array.isArray(matchRelation)
-                ? matchRelation[0]
-                : matchRelation;
-              return (
-                <div key={prediction.id} className="rounded-xl border border-card-border bg-card-bg/20 p-4 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium">
-                      {match?.team_a} vs {match?.team_b}
-                    </p>
-                    <p className="text-sm text-foreground/70">
-                      Picked: {prediction.predicted_winner} ({prediction.predicted_score_a}-{prediction.predicted_score_b})
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm uppercase text-foreground/60">{prediction.outcome}</p>
-                    <p className="text-xl font-semibold">{prediction.points_awarded ?? 0} pts</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+      {isAdmin ? (
+        <Link
+          href="/admin"
+          aria-label="Open Admin Dashboard"
+          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-cyan-300/70 bg-[linear-gradient(145deg,rgba(8,30,72,0.95),rgba(6,22,58,0.92))] text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.4),0_0_24px_rgba(34,211,238,0.45)] transition-transform hover:scale-105 hover:text-white"
+        >
+          <Shield className="h-6 w-6" />
+        </Link>
+      ) : null}
     </div>
   );
 }

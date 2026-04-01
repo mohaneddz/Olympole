@@ -12,29 +12,29 @@ export function Footer() {
   return (
     <footer className="relative mt-auto w-full overflow-hidden border-t border-cyan-300/15">
       <Image
-        src="/images/backgrounds/footer-background.png"
-        alt="Footer background"
+        src="/images/backgrounds/footer-background.avif"
+        alt=""
         fill
         sizes="100vw"
         className="object-cover object-center"
       />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,19,56,0.3),rgba(6,16,44,0.62))]" />
 
-      <div className="relative z-10 mx-auto flex min-h-[250px] w-full max-w-[1200px] flex-col items-center justify-center px-4 py-6 text-center sm:px-6 sm:py-8">
+      <div className="relative z-10 mx-auto flex min-h-64 w-full max-w-7xl flex-col items-center justify-center px-4 py-6 text-center sm:px-6 sm:py-8">
         <Image
           src="/images/brand/esc.png"
           alt="ESC Club logo"
           width={84}
           height={84}
-          className="h-auto w-[58px] drop-shadow-[0_0_16px_rgba(108,237,255,0.45)] sm:w-[74px]"
+          className="h-auto w-14 sm:w-20"
         />
 
-        <div className="mt-2 flex w-full max-w-[960px] items-center gap-3 sm:mt-3 sm:gap-6">
-          <NeonRail side="left" />
-          <h2 className="font-heading text-[2.15rem] leading-none font-black tracking-tight text-cyan-200 [text-shadow:0_0_22px_rgba(83,226,255,0.35)] sm:text-[3.1rem]">
+        <div className="mt-2 flex w-full max-w-4xl items-center gap-3 sm:mt-3 sm:gap-6">
+          {/* <NeonRail side="left" /> */}
+          <h2 className="mx-auto font-heading text-[2.15rem] font-black leading-none tracking-tight text-cyan-200 sm:text-[3.1rem]">
             Olympole 2026
           </h2>
-          <NeonRail side="right" />
+          {/* <NeonRail side="right" /> */}
         </div>
 
         <p className="mt-3 font-heading text-[1.9rem] leading-none text-white sm:mt-4 sm:text-[2.3rem]">
@@ -57,24 +57,6 @@ export function Footer() {
         </div>
       </div>
     </footer>
-  );
-}
-
-function NeonRail({ side }: { side: "left" | "right" }) {
-  return (
-    <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-      {side === "left" ? (
-        <>
-          <span className="h-4 w-4 rounded-full border-2 border-white/90 shadow-[0_0_10px_rgba(255,255,255,0.45)] sm:h-5 sm:w-5" />
-          <span className="h-[4px] flex-1 rounded-full bg-[linear-gradient(90deg,rgba(255,121,229,0.95),rgba(255,105,207,0.7))] shadow-[0_0_16px_rgba(255,92,220,0.9)]" />
-        </>
-      ) : (
-        <>
-          <span className="h-[4px] flex-1 rounded-full bg-[linear-gradient(90deg,rgba(255,105,207,0.7),rgba(255,121,229,0.95))] shadow-[0_0_16px_rgba(255,92,220,0.9)]" />
-          <span className="h-4 w-4 rounded-full border-2 border-white/90 shadow-[0_0_10px_rgba(255,255,255,0.45)] sm:h-5 sm:w-5" />
-        </>
-      )}
-    </div>
   );
 }
 

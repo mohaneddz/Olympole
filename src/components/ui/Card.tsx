@@ -17,16 +17,11 @@ const GlowCard = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
     <div
       ref={ref}
       className={cn(
-        "rounded-xl glass-card text-card-foreground transition-all duration-300 hover:-translate-y-1 relative group overflow-hidden",
-        glowColor === "cyan" ? "hover:glow-border-cyan" : "hover:glow-border-purple",
+        "rounded-xl glass-card text-card-foreground transition-all duration-300 hover:-translate-y-1 relative group overflow-hidden border border-white/10 hover:border-white/20",
         className
       )}
       {...props}
     >
-      <div className={cn(
-        "absolute -inset-px opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl",
-        glowColor === "cyan" ? "bg-gradient-to-br from-cyan-500/20 to-transparent" : "bg-gradient-to-br from-purple-500/20 to-transparent"
-      )} />
       <div className="relative z-10 w-full h-full">
         {props.children}
       </div>

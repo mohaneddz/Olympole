@@ -1,53 +1,137 @@
+import Image from "next/image";
 import Link from "next/link";
-import { GlowCard } from "@/components/ui/Card";
-import { Paintbrush, Mic2, BookOpen } from "lucide-react";
+import { CULTURE_EVENTS, CULTURE_DECORATIVE_ELEMENTS, CultureEvent } from "@/data/culture";
 
-export default function CultureHub() {
+/* ───────── page ───────── */
+export default function CulturePage() {
   return (
-    <div className="container mx-auto px-4 py-16 max-w-7xl flex flex-col gap-12 flex-1">
-      <div className="text-center">
-        <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-secondary to-pink-500">
-          Culture Hub
-        </h1>
-        <p className="text-xl text-foreground/70 max-w-2xl mx-auto">
-          Olympole 2026 is not just about physical superiority. Explore the apex of human creativity in our digital exhibits.
-        </p>
-      </div>
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
+      {/* ── Hero banner ── */}
+      <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden">
+        {/* Hero Background Image */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/images/backgrounds/hero.avif"
+            alt=""
+            fill
+            priority
+            className="object-cover"
+          />
+          {/* Subtle overlay to make text pop, but NO bottom fade */}
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <Link href="/culture/art" className="block outline-none">
-          <GlowCard glowColor="purple" className="p-8 flex flex-col items-center text-center h-full hover:scale-105 transition-transform">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mb-6 border border-secondary/50">
-              <Paintbrush className="w-10 h-10 text-secondary" />
-            </div>
-            <h3 className="text-2xl font-bold mb-4">Digital Art Exhibition</h3>
-            <p className="text-foreground/70 mb-6 flex-1">Immersive holographic galleries and algorithmic masterpiece displays.</p>
-            <span className="text-secondary font-bold text-sm uppercase tracking-wider">Enter Gallery</span>
-          </GlowCard>
-        </Link>
+        <div className="container relative z-10 mx-auto flex flex-col items-center justify-center gap-4 px-4 text-center">
+          <Image
+            src="/images/brand/fire.png"
+            alt=""
+            width={292}
+            height={362}
+            aria-hidden
+            className="mb-2 h-auto w-32 md:w-40 animate-fade-in-up"
+          />
+          <Image
+            src="/images/brand/circles.png"
+            alt=""
+            width={243}
+            height={134}
+            aria-hidden
+            className="mb-6 h-auto w-16 md:w-20 animate-fade-in-up"
+          />
+          <h1 className="font-heading text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8">
+            <span
+              className="text-white"
+            >
+              CULTURAL EVENTS
+            </span>
+          </h1>
 
-        <Link href="/culture/talent" className="block outline-none">
-          <GlowCard glowColor="cyan" className="p-8 flex flex-col items-center text-center h-full hover:scale-105 transition-transform">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-blue-500/20 flex items-center justify-center mb-6 border border-primary/50">
-              <Mic2 className="w-10 h-10 text-primary" />
-            </div>
-            <h3 className="text-2xl font-bold mb-4">Cyber-Talent Show</h3>
-            <p className="text-foreground/70 mb-6 flex-1">Live performances augmented by neural-reactive visuals and droneography.</p>
-            <span className="text-primary font-bold text-sm uppercase tracking-wider">Watch Live</span>
-          </GlowCard>
-        </Link>
+          <div className="mt-8">
+            <Link
+              href="#culture-activities"
+              className="inline-flex h-14 items-center justify-center rounded-full border border-secondary/40 bg-secondary/10 px-8 text-lg font-bold text-secondary backdrop-blur-md transition-all hover:bg-secondary hover:text-white hover:shadow-none active:scale-95"
+            >
+              Explore Culture
+            </Link>
+          </div>
+        </div>
+      </section>
 
-        <Link href="/culture/writing" className="block outline-none">
-          <GlowCard glowColor="purple" className="p-8 flex flex-col items-center text-center h-full hover:scale-105 transition-transform cursor-pointer">
-            <div className="w-20 h-20 rotate-45 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center mb-6 border border-indigo-500/50">
-              <div className="-rotate-45"><BookOpen className="w-10 h-10 text-indigo-400" /></div>
-            </div>
-            <h3 className="text-2xl font-bold mb-4">Writing Contest</h3>
-            <p className="text-foreground/70 mb-6 flex-1">The grand archive of neo-literature. Read, judge, and submit.</p>
-            <span className="text-indigo-400 font-bold text-sm uppercase tracking-wider">Read Archives</span>
-          </GlowCard>
-        </Link>
-      </div>
+      {/* ── Cards section ── */}
+      <section id="culture-activities" className="relative z-10 w-full bg-background pt-24 pb-20">
+        <div className="mx-auto max-w-3xl px-4">
+          {/* Decorative floating elements */}
+          {CULTURE_DECORATIVE_ELEMENTS.map((el, i) => (
+            <Image
+              key={i}
+              src={el.src}
+              alt=""
+              width={120}
+              height={120}
+              aria-hidden
+              className={`pointer-events-none ${el.className}`}
+            />
+          ))}
+
+          <div className="flex flex-col gap-10">
+            {CULTURE_EVENTS.map((event, idx) => (
+              <CultureCard key={event.name} event={event} index={idx} />
+            ))}
+          </div>
+        </div>
+      </section>
     </div>
+  );
+}
+
+/* ───────── culture card ───────── */
+function CultureCard({ event, index }: { event: CultureEvent; index: number }) {
+  const isEven = index % 2 === 0;
+
+  return (
+    <article
+      className={`animate-fade-in-up group relative flex flex-col ${isEven ? "sm:flex-row" : "sm:flex-row-reverse"
+        } items-center gap-5 sm:gap-8`}
+      style={{ animationDelay: `${index * 120}ms` }}
+    >
+      {/* Text content */}
+      <div className={`flex-1 ${isEven ? "sm:text-left" : "sm:text-right"}`}>
+        <h2 className="text-2xl md:text-3xl font-extrabold mb-2 underline underline-offset-4 decoration-[#ffc040]/50 decoration-2">
+          {event.name}
+        </h2>
+        <p className="text-sm md:text-base text-foreground/80 leading-relaxed mb-1">
+          {event.tagline}
+        </p>
+        <p className="text-sm md:text-base text-foreground/70 leading-relaxed mb-4">
+          {event.description}
+        </p>
+        <Link
+          href={event.href}
+          className="inline-flex items-center gap-2 rounded-lg border-2 border-foreground/80 bg-transparent px-5 py-2.5 text-sm font-bold tracking-wide text-foreground transition-all duration-300 hover:bg-[#ffc040] hover:border-[#ffc040] hover:text-black hover:shadow-none active:scale-95"
+        >
+          Register Now !
+        </Link>
+      </div>
+
+      {/* Image */}
+      <div className="relative w-48 h-48 sm:w-56 sm:h-56 flex-shrink-0">
+        <div className="absolute inset-0 rounded-2xl overflow-hidden border border-card-border/60 transition-shadow duration-500">
+          <Image
+            src={event.image}
+            alt={event.name}
+            fill
+            className="object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+          {/* Event-specific gradient overlay */}
+          <div className={`absolute inset-0 bg-gradient-to-t ${event.gradient}`} />
+          {/* Bottom dark gradient */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#030b2b]/70 via-transparent to-transparent" />
+          {/* Emoji overlay */}
+          <div className="absolute bottom-3 right-3 text-3xl opacity-80">
+            {event.emoji}
+          </div>
+        </div>
+      </div>
+    </article>
   );
 }
