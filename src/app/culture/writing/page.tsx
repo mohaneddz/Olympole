@@ -13,7 +13,7 @@ export default async function WritingContestPage() {
   ]);
 
   return (
-    <div className="container mx-auto px-4 py-16 max-w-7xl flex flex-col gap-12 flex-1">
+    <div className="container mx-auto flex min-h-screen max-w-7xl flex-1 flex-col gap-12 px-4 py-16">
       <div className="max-w-3xl">
         <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight mb-6 text-indigo-400">Writing Contest</h1>
         <p className="text-xl text-foreground/70 mb-8">&quot;Words are the original code.&quot; Submit, publish, and vote in one workflow.</p>

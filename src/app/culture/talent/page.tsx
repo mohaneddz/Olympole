@@ -26,7 +26,7 @@ export default async function TalentShowPage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-16 max-w-6xl flex flex-col gap-10 flex-1">
+    <div className="container mx-auto flex min-h-screen max-w-6xl flex-1 flex-col gap-10 px-4 py-16">
       <div className="text-center space-y-4">
         <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white to-primary">
           Talent Show

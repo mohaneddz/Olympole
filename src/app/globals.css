@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #05050f;
+  --background: #0f141f;
   --foreground: #f8fafc;
   
   --primary: #00f0ff;
@@ -32,10 +32,43 @@
 
 body {
   background-color: var(--background);
+  background-image:
+    linear-gradient(180deg, rgba(3, 13, 46, 0.82) 0%, rgba(2, 10, 36, 0.9) 55%, rgba(1, 6, 24, 0.95) 100%),
+    url("/images/backgrounds/background.avif");
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+button, 
+[role="button"], 
+input[type="button"], 
+input[type="submit"], 
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"],
+select,
+label[for] {
+  cursor: pointer;
+}
+
+main > * {
+  min-height: 100vh;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -49,25 +82,28 @@ h1, h2, h3, h4, h5, h6 {
   color: #ffffff !important;
 }
 
-.bg-clip-text.text-transparent {
+.bg-clip-text.text-transparent:not(.gradient-hero) {
   color: #ffffff !important;
   background-image: none !important;
   -webkit-text-fill-color: #ffffff !important;
 }
 
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out both;
+}
+
 /* Custom Utilities for Glowing Effects */
 @layer utilities {
-  .glow-border-cyan {
-    box-shadow: var(--glow-cyan);
-    border: 1px solid var(--primary);
-  }
-  .glow-border-purple {
-    box-shadow: var(--glow-purple);
-    border: 1px solid var(--secondary);
-  }
-  .glow-text-cyan {
-    text-shadow: 0 0 10px rgba(0, 240, 255, 0.8);
-  }
   .glass-card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
@@ -83,4 +119,13 @@ h1, h2, h3, h4, h5, h6 {
 
 .col{
   flex-direction: column;
+}
+
+select.profile-select {
+  color-scheme: dark;
+}
+
+select.profile-select option {
+  background-color: #0a1636;
+  color: #e8f8ff;
 }

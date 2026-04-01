@@ -18,7 +18,7 @@ export default async function ArtExhibitionPage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-16 max-w-6xl flex flex-col gap-8 flex-1">
+    <div className="container mx-auto flex min-h-screen max-w-6xl flex-1 flex-col gap-8 px-4 py-16">
       <div className="text-center">
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-secondary">
           Art Exhibition
