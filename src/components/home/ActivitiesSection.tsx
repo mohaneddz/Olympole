@@ -6,7 +6,7 @@ export function ActivitiesSection() {
   const registerLabel = "REGISTER";
 
   return (
-    <section id="activities" className="relative z-10 flex min-h-screen items-center overflow-hidden bg-[#030b2b] py-14 md:py-20">
+    <section id="activities" className="relative z-10 flex min-h-screen scroll-mt-20 items-center overflow-hidden bg-[#030b2b] py-14 md:py-20">
       <Image
         src="/svgs/artifacts/big-circles.svg"
         alt=""
@@ -29,7 +29,7 @@ export function ActivitiesSection() {
         width={400}
         height={400}
         aria-hidden
-        className="pointer-events-none absolute left-[34%] top-[4%] h-auto w-20 opacity-100 md:w-50"
+        className="pointer-events-none absolute left-[26%] top-[4%] h-auto w-20 opacity-100 md:w-70"
       />
       <Image
         src="/svgs/artifacts/big-circles.svg"
@@ -106,7 +106,7 @@ export function ActivitiesSection() {
                 {column.items.map((item) => (
                   <div
                     key={item.name}
-                    className={`group/row flex items-center gap-3 rounded-2xl px-4 py-3 md:px-5 md:py-3.5 ${column.rowBg} transition-all duration-300 hover:-translate-y-1 hover:shadow-lg`}
+                    className={`group/row flex items-center gap-3 rounded-2xl px-4 py-3 md:px-5 md:py-3.5 ${column.rowBg} transition-all duration-300 hover:shadow-lg`}
                   >
                     <span className={`min-w-0 flex-1 text-base font-bold leading-tight md:text-xl ${column.text} transition-opacity group-hover/row:opacity-90`}>
                       {item.name}
