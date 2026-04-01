@@ -86,15 +86,4 @@ export const SPORTS: SportItem[] = [
     },
 ];
 
-export const SPORTS_DECORATIVE_ELEMENTS = [
-    { src: "/svgs/artifacts/blue-zigzag.svg", className: "absolute -left-4 top-[8%] w-12 md:w-20 opacity-80" },
-    { src: "/svgs/artifacts/yellow-zigzag.svg", className: "absolute -right-4 top-[15%] w-16 md:w-20 opacity-80" },
-    { src: "/svgs/artifacts/small-circles.svg", className: "absolute left-[5%] top-[30%] w-8 md:w-16 opacity-70" },
-    { src: "/svgs/artifacts/diamonds.svg", className: "absolute right-[8%] top-[35%] w-8 md:w-16 opacity-70" },
-    { src: "/svgs/artifacts/pink-line.svg", className: "absolute -left-2 top-[52%] w-11 md:w-16 opacity-75" },
-    { src: "/svgs/artifacts/big-circles.svg", className: "absolute right-[3%] top-[55%] w-12 md:w-20 opacity-75" },
-    { src: "/svgs/artifacts/blue-zigzag.svg", className: "absolute left-[10%] top-[70%] w-8 md:w-16 opacity-65 rotate-45" },
-    { src: "/svgs/artifacts/diamonds.svg", className: "absolute -right-5 top-[75%] w-14 md:w-20 opacity-70" },
-    { src: "/svgs/artifacts/yellow-zigzag.svg", className: "absolute left-[3%] bottom-[8%] w-14 md:w-20 opacity-70 rotate-180" },
-    { src: "/svgs/artifacts/small-circles.svg", className: "absolute -right-2 bottom-[5%] w-16 md:w-24 opacity-65" },
-];
+

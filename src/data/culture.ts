@@ -48,15 +48,4 @@ export const CULTURE_EVENTS: CultureEvent[] = [
   },
 ];
 
-export const CULTURE_DECORATIVE_ELEMENTS = [
-  { src: "/svgs/artifacts/yellow-zigzag.svg", className: "absolute -right-4 top-[6%] w-14 md:w-20 opacity-80" },
-  { src: "/svgs/artifacts/small-circles.svg", className: "absolute -left-2 top-[18%] w-9 md:w-16 opacity-70" },
-  { src: "/svgs/artifacts/diamonds.svg", className: "absolute right-[5%] top-[28%] w-12 md:w-20 opacity-75" },
-  { src: "/svgs/artifacts/blue-zigzag.svg", className: "absolute left-[8%] top-[40%] w-8 md:w-12 opacity-65" },
-  { src: "/svgs/artifacts/big-circles.svg", className: "absolute -right-3 top-[50%] w-14 md:w-24 opacity-70" },
-  { src: "/svgs/artifacts/pink-line.svg", className: "absolute -left-3 top-[62%] w-11 md:w-16 opacity-70" },
-  { src: "/svgs/artifacts/diamonds.svg", className: "absolute right-[10%] top-[72%] w-8 md:w-12 opacity-60" },
-  { src: "/svgs/artifacts/yellow-zigzag.svg", className: "absolute -left-4 bottom-[8%] w-14 md:w-20 opacity-70 rotate-45" },
-  { src: "/svgs/artifacts/small-circles.svg", className: "absolute -right-3 bottom-[12%] w-14 md:w-20 opacity-65" },
-  { src: "/svgs/artifacts/blue-zigzag.svg", className: "absolute left-[3%] bottom-[25%] w-12 md:w-16 opacity-60 rotate-180" },
-];
+
