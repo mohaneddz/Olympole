@@ -1,121 +1,70 @@
 import Link from "next/link";
 import Image from "next/image";
-import { CircleDot, Dumbbell, Palette } from "lucide-react";
-
-const ACTIVITY_COLUMNS = [
-  {
-    title: "Collective Sports",
-    icon: CircleDot,
-    border: "border-[#f18cd4]",
-    heading: "text-[#f2acd9]",
-    rowBg: "bg-[#ef8dd6]",
-    text: "text-[#120920]",
-    button: "border-[#3d243a] text-[#1a1026]",
-    items: [
-      { name: "Football", href: "/register" },
-      { name: "Basketball", href: "/register" },
-      { name: "Handball", href: "/register" },
-      { name: "Volleyball", href: "/register" },
-    ],
-  },
-  {
-    title: "Individual Sports",
-    icon: Dumbbell,
-    border: "border-[#eef15b]",
-    heading: "text-[#eef15b]",
-    rowBg: "bg-[#ecec65]",
-    text: "text-[#181717]",
-    button: "border-[#46412b] text-[#1d1b12]",
-    items: [
-      { name: "Swimming", href: "/register" },
-      { name: "Tennis", href: "/register" },
-      { name: "Chess", href: "/register" },
-      { name: "Running", href: "/register" },
-    ],
-  },
-  {
-    title: "Cultural Events",
-    icon: Palette,
-    border: "border-[#00d8ff]",
-    heading: "text-[#90edff]",
-    rowBg: "bg-[#13c8e5]",
-    text: "text-white",
-    button: "border-white text-white",
-    items: [
-      { name: "Talent Show", href: "/culture/talent" },
-      { name: "Knowledge Cup", href: "/culture" },
-      { name: "Writing Contest", href: "/culture/writing" },
-      { name: "Drawing & Art", href: "/culture/art" },
-    ],
-  },
-] as const;
+import { ACTIVITY_COLUMNS } from "@/data/activities";
 
 export function ActivitiesSection() {
   const registerLabel = "REGISTER";
 
   return (
-    <section className="relative z-10 overflow-hidden bg-[#030b2b] pb-24 pt-16 md:pb-28 md:pt-24">
-      {/* Non-cropped (full circles) in the center area */}
+    <section id="activities" className="relative z-10 flex min-h-screen items-center overflow-hidden bg-[#030b2b] py-14 md:py-20">
       <Image
-        src="/images/artifacts/Rectangle-6.png"
+        src="/svgs/artifacts/big-circles.svg"
         alt=""
-        width={135}
-        height={135}
+        width={400}
+        height={400}
         aria-hidden
-        className="pointer-events-none absolute left-[25%] top-[10%] h-auto w-[60px] opacity-95 md:w-[90px]"
+        className="pointer-events-none absolute -right-[6%] -top-[2%] h-auto w-40 opacity-100 md:w-90"
       />
       <Image
-        src="/images/artifacts/Rectangle-7.png"
+        src="/svgs/artifacts/dashes.svg"
         alt=""
-        width={113}
-        height={113}
+        width={400}
+        height={400}
         aria-hidden
-        className="pointer-events-none absolute left-[45%] top-[80%] h-auto w-[50px] opacity-95 md:w-[70px]"
+        className="pointer-events-none absolute right-[34%] top-[4%] h-auto w-20 opacity-100 md:w-50"
       />
       <Image
-        src="/images/artifacts/Rectangle-12.png"
+        src="/svgs/artifacts/small-circles.svg"
         alt=""
-        width={126}
-        height={128}
+        width={400}
+        height={400}
         aria-hidden
-        className="pointer-events-none absolute right-[35%] top-[5%] h-auto w-[65px] opacity-95 md:w-[85px]"
+        className="pointer-events-none absolute left-[34%] top-[4%] h-auto w-20 opacity-100 md:w-50"
       />
       <Image
-        src="/images/artifacts/Rectangle-4.png"
+        src="/svgs/artifacts/big-circles.svg"
         alt=""
-        width={135}
-        height={135}
+        width={400}
+        height={400}
         aria-hidden
-        className="pointer-events-none absolute right-[25%] top-[60%] h-auto w-[55px] opacity-95 md:w-[80px]"
-      />
-
-      {/* Cropped images strictly on the borders */}
-      <Image
-        src="/images/artifacts/Rectangle-2.png"
-        alt=""
-        width={141}
-        height={206}
-        aria-hidden
-        className="pointer-events-none absolute left-0 bottom-[15%] h-auto w-[82px] opacity-95 md:w-[118px]"
+        className="pointer-events-none absolute -left-[6%] right-[12%] h-auto w-20 opacity-100 md:w-70"
       />
       <Image
-        src="/images/artifacts/Rectangle-10.png"
+        src="/svgs/artifacts/blue-zigzag.svg"
         alt=""
-        width={145}
-        height={205}
+        width={400}
+        height={400}
         aria-hidden
-        className="pointer-events-none absolute right-0 bottom-[30%] h-auto w-[84px] opacity-95 md:w-[122px]"
+        className="pointer-events-none absolute -left-[6%] -bottom-[5%] h-auto w-20 opacity-100 md:w-70"
       />
       <Image
-        src="/images/artifacts/Rectangle-11.png"
+        src="/svgs/artifacts/blue-zigzag.svg"
         alt=""
-        width={149}
-        height={248}
+        width={400}
+        height={400}
         aria-hidden
-        className="pointer-events-none absolute right-0 top-[20%] h-auto w-[88px] opacity-85 md:w-[116px]"
+        className="pointer-events-none absolute -right-[6%] top-[30%] h-auto w-20 opacity-100 md:w-70"
+      />
+      <Image
+        src="/svgs/artifacts/yellow-zigzag.svg"
+        alt=""
+        width={400}
+        height={400}
+        aria-hidden
+        className="pointer-events-none absolute -right-[5%] top-[40%] h-auto w-20 opacity-100 md:w-50"
       />
 
-      <div className="container relative z-20 mx-auto max-w-7xl px-4">
+      <div className="container relative z-20 mx-auto w-full max-w-7xl px-4">
         <div className="mb-12 flex flex-col items-center text-center md:mb-14">
           <Image
             src="/images/brand/fire.png"
@@ -123,7 +72,7 @@ export function ActivitiesSection() {
             width={292}
             height={362}
             aria-hidden
-            className="mb-1 h-auto w-[92px] md:w-[112px]"
+            className="mb-1 h-auto w-24 md:w-28"
           />
           <Image
             src="/images/brand/circles.png"
@@ -131,11 +80,11 @@ export function ActivitiesSection() {
             width={243}
             height={134}
             aria-hidden
-            className="mb-4 h-auto w-[54px] md:w-[64px]"
+            className="mb-4 h-auto w-14 md:w-16"
           />
           <h2 className="relative mb-5 text-5xl font-bold tracking-tight text-[#a6eaff] md:text-6xl">
             Activities
-            <span className="absolute -bottom-2 left-1/2 h-[8px] w-[9.5rem] -translate-x-1/2 rounded-full bg-[#86deff]" />
+            <span className="absolute -bottom-2 left-1/2 h-2 w-[9.5rem] -translate-x-1/2 rounded-full bg-[#86deff]" />
           </h2>
           <p className="max-w-4xl text-xl leading-snug text-white md:text-3xl">
             Register On Your Favorite Activity and Join the Fun
