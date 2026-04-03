@@ -22,6 +22,23 @@ export const registrationBatchSchema = registrationSchema.extend({
   event_ids: z.array(uuid).min(1).max(8),
 });
 
+export const activityRegistrationSchema = registrationSchema.extend({
+  activity_slug: z
+    .string()
+    .min(2)
+    .max(80)
+    .regex(/^[a-z0-9-]+$/),
+  previous_experience: z.string().min(8).max(1000),
+  motivation: z.string().min(20).max(1200),
+  availability_date: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || !Number.isNaN(Date.parse(value)), "Invalid availability date."),
+  preferred_role: z.string().max(120).optional().or(z.literal("")),
+  registration_details: z.record(z.string(), z.string()).optional(),
+});
+
 export const eventSchema = z
   .object({
     title: z.string().min(2).max(160),
@@ -44,6 +61,7 @@ export const eventSchema = z
     is_featured: z.boolean().optional(),
     visibility: z.enum(["public", "private"]).optional(),
     current_round: z.string().max(120).optional().or(z.literal("")),
+    icon_key: z.string().max(64).optional().or(z.literal("")),
   })
   .refine((value) => Date.parse(value.ends_at) >= Date.parse(value.starts_at), {
     message: "Event end date must be after start date.",
@@ -143,6 +161,43 @@ export const teamSchema = z.object({
   coach_name: z.string().max(120).optional().or(z.literal("")),
 });
 
+export const teamMembershipSchema = z.object({
+  team_id: uuid,
+  profile_id: uuid,
+  role: z.string().min(2).max(80),
+  registration_id: uuid.optional().or(z.literal("")),
+});
+
+export const tournamentSchema = z.object({
+  name: z.string().min(3).max(160),
+  sport_id: uuid.optional().or(z.literal("")),
+  event_id: uuid.optional().or(z.literal("")),
+  format: z.enum(["knockout", "group", "league", "hybrid"]),
+  status: z.enum(["draft", "scheduled", "live", "completed", "cancelled"]),
+  starts_at: datetimeString.optional().or(z.literal("")),
+  notes: z.string().max(800).optional().or(z.literal("")),
+});
+
+export const tournamentAssignmentSchema = z.object({
+  tournament_id: uuid,
+  team_id: uuid.optional().or(z.literal("")),
+});
+
+export const profileAdminUpdateSchema = z.object({
+  profile_id: uuid,
+  full_name: z.string().min(2).max(120),
+  school: z.string().max(120).optional().or(z.literal("")),
+  year_of_study: z.string().max(20).optional().or(z.literal("")),
+  phone: z.string().max(30).optional().or(z.literal("")),
+  username: z
+    .string()
+    .regex(/^[a-zA-Z0-9_]{3,32}$/)
+    .optional()
+    .or(z.literal("")),
+  avatar_url: z.url().optional().or(z.literal("")),
+  role: z.enum(["admin", "participant", "viewer"]),
+});
+
 export const liveStreamSchema = z.object({
   title: z.string().min(3).max(160),
   description: z.string().max(800).optional().or(z.literal("")),
@@ -156,6 +211,7 @@ export const liveStreamSchema = z.object({
 
 export type RegistrationInput = z.infer<typeof registrationSchema>;
 export type RegistrationBatchInput = z.infer<typeof registrationBatchSchema>;
+export type ActivityRegistrationInput = z.infer<typeof activityRegistrationSchema>;
 export type EventInput = z.infer<typeof eventSchema>;
 export type MatchInput = z.infer<typeof matchSchema>;
 export type ResultInput = z.infer<typeof resultSchema>;
@@ -165,4 +221,8 @@ export type ProfileCompletionInput = z.infer<typeof profileCompletionSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 export type SportInput = z.infer<typeof sportSchema>;
 export type TeamInput = z.infer<typeof teamSchema>;
+export type TeamMembershipInput = z.infer<typeof teamMembershipSchema>;
+export type TournamentInput = z.infer<typeof tournamentSchema>;
+export type TournamentAssignmentInput = z.infer<typeof tournamentAssignmentSchema>;
+export type ProfileAdminUpdateInput = z.infer<typeof profileAdminUpdateSchema>;
 export type LiveStreamInput = z.infer<typeof liveStreamSchema>;

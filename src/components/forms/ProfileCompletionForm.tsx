@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { completeProfileAction } from "@/app/actions/profile";
 import { Button } from "@/components/ui/Button";
+import { writeClientProfileDraftCookie } from "@/lib/cookie-drafts";
 
 const initialState = { ok: false, message: "" };
 
@@ -14,6 +15,17 @@ type Props = {
 
 export function ProfileCompletionForm({ defaultName, defaultSchool, defaultYear }: Props) {
   const [state, formAction, pending] = useActionState(completeProfileAction, initialState);
+  const [fullName, setFullName] = useState(defaultName ?? "");
+  const [school, setSchool] = useState(defaultSchool ?? "");
+  const [year, setYear] = useState(defaultYear ?? "");
+
+  useEffect(() => {
+    writeClientProfileDraftCookie({
+      full_name: fullName,
+      school,
+      year_of_study: year,
+    });
+  }, [fullName, school, year]);
 
   return (
     <form action={formAction} className="space-y-4 p-6 rounded-xl border border-card-border glass-card">
@@ -23,7 +35,8 @@ export function ProfileCompletionForm({ defaultName, defaultSchool, defaultYear 
       <input
         name="full_name"
         required
-        defaultValue={defaultName ?? ""}
+        value={fullName}
+        onChange={(event) => setFullName(event.target.value)}
         placeholder="Full name"
         className="w-full h-11 px-3 rounded bg-background/60 border border-card-border"
       />
@@ -31,7 +44,8 @@ export function ProfileCompletionForm({ defaultName, defaultSchool, defaultYear 
       <select
         name="school"
         required
-        defaultValue={defaultSchool ?? ""}
+        value={school}
+        onChange={(event) => setSchool(event.target.value)}
         className="w-full h-11 px-3 rounded bg-background/60 border border-card-border"
       >
         <option value="">Select school</option>
@@ -44,7 +58,8 @@ export function ProfileCompletionForm({ defaultName, defaultSchool, defaultYear 
       <select
         name="year_of_study"
         required
-        defaultValue={defaultYear ?? ""}
+        value={year}
+        onChange={(event) => setYear(event.target.value)}
         className="w-full h-11 px-3 rounded bg-background/60 border border-card-border"
       >
         <option value="">Year of study</option>

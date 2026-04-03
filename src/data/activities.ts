@@ -26,10 +26,10 @@ export const ACTIVITY_COLUMNS: ActivityColumn[] = [
     text: "text-[#120920]",
     button: "border-[#3d243a] text-[#1a1026] hover:bg-[#3d243a] hover:text-[#ef8dd6]",
     items: [
-      { name: "Football", href: "/register" },
-      { name: "Basketball", href: "/register" },
-      { name: "Handball", href: "/register" },
-      { name: "Volleyball", href: "/register" },
+      { name: "Football", href: "/register/football" },
+      { name: "Basketball", href: "/register/basketball" },
+      { name: "Handball", href: "/register/handball" },
+      { name: "Volleyball", href: "/register/volleyball" },
     ],
   },
   {
@@ -41,10 +41,10 @@ export const ACTIVITY_COLUMNS: ActivityColumn[] = [
     text: "text-[#181717]",
     button: "border-[#46412b] text-[#1d1b12] hover:bg-[#46412b] hover:text-[#ecec65]",
     items: [
-      { name: "Swimming", href: "/register" },
-      { name: "Tennis", href: "/register" },
-      { name: "Chess", href: "/register" },
-      { name: "Running", href: "/register" },
+      { name: "Swimming", href: "/register/swimming" },
+      { name: "Tennis", href: "/register/tennis" },
+      { name: "Chess", href: "/register/chess" },
+      { name: "Running", href: "/register/running" },
     ],
   },
   {
@@ -56,10 +56,10 @@ export const ACTIVITY_COLUMNS: ActivityColumn[] = [
     text: "text-white",
     button: "border-white text-white hover:bg-white hover:text-[#13c8e5]",
     items: [
-      { name: "Talent Show", href: "/culture/talent" },
-      { name: "Knowledge Cup", href: "/culture" },
-      { name: "Writing Contest", href: "/culture/writing" },
-      { name: "Drawing & Art", href: "/culture/art" },
+      { name: "Talent Show", href: "/register/talent-show" },
+      { name: "Knowledge Cup", href: "/register/knowledge-cup" },
+      { name: "Writing Contest", href: "/register/writing-contest" },
+      { name: "Drawing & Art", href: "/register/art-exhibition" },
     ],
   },
 ];

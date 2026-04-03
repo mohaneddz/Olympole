@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -25,11 +26,14 @@ export const metadata: Metadata = {
   description: "The official portal for Olympole 2026 - Cyber-Stadium Event",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const isAdminRoute = pathname.startsWith("/admin");
+
   return (
     <html
       lang="en"
@@ -40,7 +44,7 @@ export default function RootLayout({
         <main className="flex-1 flex flex-col relative z-10 w-full">
           {children}
         </main>
-        <Footer />
+        {!isAdminRoute ? <Footer /> : null}
       </body>
     </html>
   );

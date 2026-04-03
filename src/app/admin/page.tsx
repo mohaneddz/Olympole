@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/Button";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { LayoutDashboard } from "lucide-react";
 
 export default async function AdminOverview() {
   const supabase = await createSupabaseServerClient();
@@ -23,21 +25,30 @@ export default async function AdminOverview() {
     supabase.from("admin_activity_logs").select("action,created_at").order("created_at", { ascending: false }).limit(5),
   ]);
 
-  return (
-    <div className="flex flex-col gap-8 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Platform Overview</h1>
-        <p className="text-foreground/60">Real-time metrics and system alerts for Olympole 2026.</p>
-      </div>
+  const metricCards = [
+    { label: "Registrations", value: registrations ?? 0, tone: "text-cyan-100" },
+    { label: "Events", value: events ?? 0, tone: "text-cyan-100" },
+    { label: "Matches", value: matches ?? 0, tone: "text-emerald-200" },
+    { label: "Live Streams", value: streams ?? 0, tone: "text-amber-200" },
+  ];
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-6 rounded-xl bg-card-bg border border-card-border"><p className="text-sm text-foreground/60">Registrations</p><h3 className="text-3xl font-bold mt-2">{registrations ?? 0}</h3></div>
-        <div className="p-6 rounded-xl bg-card-bg border border-card-border"><p className="text-sm text-foreground/60">Events</p><h3 className="text-3xl font-bold mt-2">{events ?? 0}</h3></div>
-        <div className="p-6 rounded-xl bg-card-bg border border-card-border"><p className="text-sm text-foreground/60">Matches</p><h3 className="text-3xl font-bold mt-2">{matches ?? 0}</h3></div>
+  return (
+    <div className="flex flex-col gap-8">
+      <AdminPageHeader
+        icon={<LayoutDashboard className="h-3.5 w-3.5" />}
+        title="Platform Overview"
+        description="Real-time operational snapshot across registrations, events, matches, and live coverage."
+        stats={metricCards.map((metric) => ({
+          label: metric.label,
+          value: metric.value,
+          tone: metric.tone.includes("emerald") ? "success" : metric.tone.includes("amber") ? "warning" : "default",
+        }))}
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="p-6 rounded-xl bg-card-bg border border-card-border"><p className="text-sm text-foreground/60">Predictions</p><h3 className="text-3xl font-bold mt-2">{predictions ?? 0}</h3></div>
         <div className="p-6 rounded-xl bg-card-bg border border-card-border"><p className="text-sm text-foreground/60">Sports</p><h3 className="text-3xl font-bold mt-2">{sports ?? 0}</h3></div>
         <div className="p-6 rounded-xl bg-card-bg border border-card-border"><p className="text-sm text-foreground/60">Teams</p><h3 className="text-3xl font-bold mt-2">{teams ?? 0}</h3></div>
-        <div className="p-6 rounded-xl bg-card-bg border border-card-border"><p className="text-sm text-foreground/60">Live Streams</p><h3 className="text-3xl font-bold mt-2">{streams ?? 0}</h3></div>
       </div>
 
       <div className="p-6 rounded-xl bg-card-bg border border-card-border">

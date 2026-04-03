@@ -94,7 +94,7 @@ export async function Navbar() {
               </Link>
 
               {item.children?.length ? (
-                <div className="pointer-events-none absolute left-1/2 top-full z-30 w-72 -translate-x-1/2 translate-y-1 pt-4 opacity-0 transition-all duration-200 group-hover/navitem:pointer-events-auto group-hover/navitem:translate-y-0 group-hover/navitem:opacity-100">
+                <div className="pointer-events-none absolute left-0 top-full z-30 w-72 translate-x-2 translate-y-1 pt-3 opacity-0 transition-all duration-200 group-hover/navitem:pointer-events-auto group-hover/navitem:translate-y-0 group-hover/navitem:opacity-100">
                   <div className="rounded-2xl border border-cyan-300/35 bg-[linear-gradient(135deg,rgba(2,22,56,0.96),rgba(0,40,92,0.93))] p-2 shadow-[0_14px_38px_rgba(0,16,44,0.55)] backdrop-blur-xl">
                     {item.children.map((child) => (
                       <Link

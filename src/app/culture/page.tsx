@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { CULTURE_EVENTS } from "@/data/culture";
 import { SHARED_DECORATIVE_ELEMENTS } from "@/data/decoration";
 import { CultureCard } from "@/components/culture/CultureCard";
