@@ -4,7 +4,14 @@ import type { NextRequest } from "next/server";
 import { env } from "@/lib/env";
 
 export async function proxy(request: NextRequest) {
-  const response = NextResponse.next({ request });
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
+
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,5 +58,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/profile/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
