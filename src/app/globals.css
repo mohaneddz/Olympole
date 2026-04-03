@@ -13,6 +13,9 @@
   
   --glow-cyan: 0 0 20px rgba(0, 240, 255, 0.5);
   --glow-purple: 0 0 20px rgba(189, 0, 255, 0.5);
+
+  --focus-border: rgba(103, 232, 249, 0.75);
+  --focus-ring: rgba(34, 211, 238, 0.28);
   
   --radius: 12px;
 }
@@ -128,4 +131,26 @@ select.profile-select {
 select.profile-select option {
   background-color: #0a1636;
   color: #e8f8ff;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--focus-border);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+/* Match score number controls */
+input.admin-score-input[type="number"] {
+  appearance: auto;
+  color-scheme: dark;
+}
+
+input.admin-score-input[type="number"]::-webkit-outer-spin-button,
+input.admin-score-input[type="number"]::-webkit-inner-spin-button {
+  opacity: 1;
+  cursor: pointer;
+  min-height: 30px;
+  filter: brightness(1.35) saturate(1.25);
 }
