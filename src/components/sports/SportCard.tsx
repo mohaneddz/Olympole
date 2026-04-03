@@ -30,7 +30,7 @@ export default function SportCard({ sport, index }: { sport: SportItem; index: n
           {sport.description}
         </p>
         <Link
-          href="/register"
+          href={sport.href}
           className="inline-flex items-center justify-center rounded-full border border-[#80d4ff] bg-[#101423] px-14 py-3.5 text-base md:text-lg font-bold text-white transition-all duration-300 hover:bg-[#80d4ff] hover:text-black active:scale-95"
         >
           Register Now !
