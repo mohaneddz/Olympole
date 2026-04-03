@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { failure, success, type ActionResponse } from "@/lib/actions";
 import { getCurrentUser, requireAdmin } from "@/lib/auth";
+import { normalizeEventIconKey } from "@/lib/event-icons";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   eventSchema,
@@ -53,7 +55,7 @@ async function logAdmin(
   });
 }
 
-export async function createEventAction(formData: FormData): Promise<void> {
+export async function createEventAction(_: ActionResponse, formData: FormData): Promise<ActionResponse> {
   await requireAdmin();
 
   const parsed = eventSchema.safeParse({
@@ -73,10 +75,11 @@ export async function createEventAction(formData: FormData): Promise<void> {
     is_featured: toBoolean(formData.get("is_featured"), false),
     visibility: formData.get("visibility") || "public",
     current_round: formData.get("current_round"),
+    icon_key: formData.get("icon_key"),
   });
 
   if (!parsed.success) {
-    return;
+    return failure(parsed.error.issues[0]?.message ?? "Failed to create event.");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -101,17 +104,115 @@ export async function createEventAction(formData: FormData): Promise<void> {
       is_featured: parsed.data.is_featured ?? false,
       visibility: parsed.data.visibility ?? "public",
       current_round: parsed.data.current_round || null,
+      icon_key: normalizeEventIconKey(parsed.data.icon_key),
     })
     .select("id")
     .single();
 
   if (error) {
-    return;
+    return failure(error.message);
   }
 
   await logAdmin("event_create", "event", data?.id ?? null, { slug: parsed.data.slug });
   revalidatePath("/admin/events");
   revalidatePath("/admin/sports");
+  revalidatePath("/schedule");
+  revalidatePath("/sports");
+  return success("Event created.");
+}
+
+export async function updateEventAction(_: ActionResponse, formData: FormData): Promise<ActionResponse> {
+  await requireAdmin();
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) {
+    return failure("Missing event id.");
+  }
+
+  const parsed = eventSchema.safeParse({
+    title: formData.get("title"),
+    slug: formData.get("slug"),
+    type: formData.get("type"),
+    category: formData.get("category"),
+    venue: formData.get("venue"),
+    starts_at: formData.get("starts_at"),
+    ends_at: formData.get("ends_at"),
+    status: formData.get("status"),
+    description: formData.get("description"),
+    sport_id: formData.get("sport_id"),
+    registration_deadline: formData.get("registration_deadline"),
+    max_participants: toOptionalNumber(formData.get("max_participants")),
+    is_registration_open: toBoolean(formData.get("is_registration_open"), true),
+    is_featured: toBoolean(formData.get("is_featured"), false),
+    visibility: formData.get("visibility") || "public",
+    current_round: formData.get("current_round"),
+    icon_key: formData.get("icon_key"),
+  });
+
+  if (!parsed.success) {
+    return failure(parsed.error.issues[0]?.message ?? "Failed to update event.");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("events")
+    .update({
+      title: parsed.data.title,
+      slug: parsed.data.slug,
+      type: parsed.data.type,
+      category: parsed.data.category,
+      venue: parsed.data.venue,
+      starts_at: toIsoString(parsed.data.starts_at),
+      ends_at: toIsoString(parsed.data.ends_at),
+      status: parsed.data.status,
+      description: parsed.data.description || null,
+      sport_id: parsed.data.sport_id || null,
+      registration_deadline: parsed.data.registration_deadline
+        ? toIsoString(parsed.data.registration_deadline)
+        : null,
+      max_participants: parsed.data.max_participants ?? null,
+      is_registration_open: parsed.data.is_registration_open ?? true,
+      is_featured: parsed.data.is_featured ?? false,
+      visibility: parsed.data.visibility ?? "public",
+      current_round: parsed.data.current_round || null,
+      icon_key: normalizeEventIconKey(parsed.data.icon_key),
+    })
+    .eq("id", id);
+
+  if (error) {
+    return failure(error.message);
+  }
+
+  await logAdmin("event_update", "event", id, { slug: parsed.data.slug });
+  revalidatePath("/admin/events");
+  revalidatePath(`/admin/events/${id}/edit`);
+  revalidatePath("/admin/sports");
+  revalidatePath("/schedule");
+  revalidatePath("/sports");
+  return success("Event updated.");
+}
+
+export async function updateEventIconAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) {
+    return;
+  }
+
+  const iconKey = normalizeEventIconKey(formData.get("icon_key"));
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("events")
+    .update({ icon_key: iconKey })
+    .eq("id", id);
+
+  if (error) {
+    return;
+  }
+
+  await logAdmin("event_icon_update", "event", id, { icon_key: iconKey });
+  revalidatePath("/admin/events");
   revalidatePath("/schedule");
   revalidatePath("/sports");
 }
@@ -135,7 +236,7 @@ export async function deleteEventAction(formData: FormData): Promise<void> {
   revalidatePath("/sports");
 }
 
-export async function createMatchAction(formData: FormData): Promise<void> {
+export async function createMatchAction(_: ActionResponse, formData: FormData): Promise<ActionResponse> {
   await requireAdmin();
 
   const parsed = matchSchema.safeParse({
@@ -159,7 +260,7 @@ export async function createMatchAction(formData: FormData): Promise<void> {
   });
 
   if (!parsed.success) {
-    return;
+    return failure(parsed.error.issues[0]?.message ?? "Failed to create match.");
   }
 
   const winningTeamId =
@@ -198,13 +299,14 @@ export async function createMatchAction(formData: FormData): Promise<void> {
     .single();
 
   if (error) {
-    return;
+    return failure(error.message);
   }
 
   await logAdmin("match_create", "match", data?.id ?? null);
   revalidatePath("/admin/events");
   revalidatePath("/match-center");
   revalidatePath("/predictions");
+  return success("Match created.");
 }
 
 export async function updateMatchAction(formData: FormData): Promise<void> {
@@ -283,7 +385,7 @@ export async function updateMatchAction(formData: FormData): Promise<void> {
   revalidatePath("/predictions");
 }
 
-export async function createResultAction(formData: FormData): Promise<void> {
+export async function createResultAction(_: ActionResponse, formData: FormData): Promise<ActionResponse> {
   await requireAdmin();
 
   const parsed = resultSchema.safeParse({
@@ -295,7 +397,7 @@ export async function createResultAction(formData: FormData): Promise<void> {
   });
 
   if (!parsed.success) {
-    return;
+    return failure(parsed.error.issues[0]?.message ?? "Failed to create result.");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -315,12 +417,13 @@ export async function createResultAction(formData: FormData): Promise<void> {
     .single();
 
   if (error) {
-    return;
+    return failure(error.message);
   }
 
   await logAdmin("result_create", "result", data?.id ?? null);
   revalidatePath("/admin/events");
   revalidatePath("/results");
+  return success("Result created.");
 }
 
 export async function scoreMatchPredictionsAction(formData: FormData): Promise<void> {

@@ -1,9 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { failure, success, type ActionResponse } from "@/lib/actions";
 import { getCurrentUserRoles, requireAuth } from "@/lib/auth";
+import { PROFILE_DRAFT_COOKIE } from "@/lib/cookie-drafts";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { profileCompletionSchema, profileUpdateSchema } from "@/lib/validators";
@@ -143,6 +145,8 @@ export async function completeProfileAction(_: ActionResponse, formData: FormDat
   if (error) {
     return failure(`Failed to save profile: ${error.message}`);
   }
+
+  (await cookies()).delete(PROFILE_DRAFT_COOKIE);
 
   const roles = await getCurrentUserRoles();
   if (roles.includes("admin")) {
