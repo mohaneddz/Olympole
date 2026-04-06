@@ -2,10 +2,11 @@ import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import {
   deleteLiveStreamAction,
+  updateLiveStreamDetailsAction,
   updateLiveStreamStatusAction,
 } from "@/app/actions/events";
 import { requireAdmin } from "@/lib/auth";
-import { getPublicLiveStreams } from "@/lib/queries";
+import { getAdminLiveStreams, getAllAdminEvents } from "@/lib/queries";
 import { PlusCircle, Radio } from "lucide-react";
 
 function badgeClasses(status: string) {
@@ -18,9 +19,23 @@ function badgeClasses(status: string) {
   return "border-cyan-300/30 bg-cyan-300/10 text-cyan-100";
 }
 
+function toDateTimeLocalValue(value: string | null) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const offsetMs = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
 export default async function AdminLivePage() {
   await requireAdmin();
-  const streams = await getPublicLiveStreams();
+  const [streams, events] = await Promise.all([getAdminLiveStreams(), getAllAdminEvents()]);
 
   const totalStreams = streams.length;
   const liveCount = streams.filter((stream) => stream.status === "live").length;
@@ -99,6 +114,88 @@ export default async function AdminLivePage() {
                       </p>
                     </div>
                   </div>
+
+                  <form action={updateLiveStreamDetailsAction} className="grid grid-cols-1 gap-3 rounded-xl border border-cyan-300/15 bg-[#0d1838]/60 p-3">
+                    <input type="hidden" name="id" value={stream.id} />
+                    <input type="hidden" name="status" value={stream.status} />
+                    <label className="text-xs text-cyan-100/75">
+                      <span className="mb-1 block">Title</span>
+                      <input
+                        name="title"
+                        required
+                        defaultValue={stream.title}
+                        className="h-9 w-full rounded-lg border border-cyan-300/20 bg-[#101a34] px-2.5 text-sm outline-none transition focus:border-cyan-300/60"
+                      />
+                    </label>
+                    <label className="text-xs text-cyan-100/75">
+                      <span className="mb-1 block">Description</span>
+                      <textarea
+                        name="description"
+                        defaultValue={stream.description ?? ""}
+                        className="min-h-16 w-full rounded-lg border border-cyan-300/20 bg-[#101a34] px-2.5 py-2 text-sm outline-none transition focus:border-cyan-300/60"
+                      />
+                    </label>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <label className="text-xs text-cyan-100/75">
+                        <span className="mb-1 block">Playback URL</span>
+                        <input
+                          name="playback_url"
+                          defaultValue={stream.playback_url ?? ""}
+                          placeholder="https://..."
+                          className="h-9 w-full rounded-lg border border-cyan-300/20 bg-[#101a34] px-2.5 text-sm outline-none transition focus:border-cyan-300/60"
+                        />
+                      </label>
+                      <label className="text-xs text-cyan-100/75">
+                        <span className="mb-1 block">Visibility</span>
+                        <select
+                          name="access"
+                          defaultValue={stream.access}
+                          className="h-9 w-full rounded-lg border border-cyan-300/20 bg-[#101a34] px-2.5 text-sm outline-none transition focus:border-cyan-300/60"
+                        >
+                          <option value="public">public</option>
+                          <option value="private">private</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <label className="text-xs text-cyan-100/75">
+                        <span className="mb-1 block">Starts at</span>
+                        <input
+                          type="datetime-local"
+                          name="starts_at"
+                          defaultValue={toDateTimeLocalValue(stream.starts_at)}
+                          className="h-9 w-full rounded-lg border border-cyan-300/20 bg-[#101a34] px-2.5 text-sm outline-none transition focus:border-cyan-300/60"
+                        />
+                      </label>
+                      <label className="text-xs text-cyan-100/75">
+                        <span className="mb-1 block">Ends at</span>
+                        <input
+                          type="datetime-local"
+                          name="ends_at"
+                          defaultValue={toDateTimeLocalValue(stream.ends_at)}
+                          className="h-9 w-full rounded-lg border border-cyan-300/20 bg-[#101a34] px-2.5 text-sm outline-none transition focus:border-cyan-300/60"
+                        />
+                      </label>
+                    </div>
+                    <label className="text-xs text-cyan-100/75">
+                      <span className="mb-1 block">Linked event</span>
+                      <select
+                        name="event_id"
+                        defaultValue={stream.event_id ?? ""}
+                        className="h-9 w-full rounded-lg border border-cyan-300/20 bg-[#101a34] px-2.5 text-sm outline-none transition focus:border-cyan-300/60"
+                      >
+                        <option value="">No linked event</option>
+                        {events.map((event) => (
+                          <option key={event.id} value={event.id}>
+                            {event.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <button className="rounded-lg border border-cyan-300/35 px-3 py-1.5 text-sm font-medium text-cyan-100 hover:bg-cyan-300/10">
+                      Save Details
+                    </button>
+                  </form>
 
                   <div className="flex flex-wrap items-center gap-2">
                     <form action={updateLiveStreamStatusAction}>

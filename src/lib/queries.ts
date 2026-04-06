@@ -223,7 +223,23 @@ export async function getPublicLiveStreams() {
   const { data, error } = await supabase
     .from("live_streams")
     .select("id, title, description, status, access, playback_url, starts_at, ends_at, event_id, events(title, slug, starts_at)")
-    .in("status", ["live", "draft", "scheduled", "completed"])
+    .eq("access", "public")
+    .in("status", ["live", "draft", "ended"])
+    .order("starts_at", { ascending: false, nullsFirst: false });
+
+  if (error) {
+    return [];
+  }
+
+  return data ?? [];
+}
+
+export async function getAdminLiveStreams() {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("live_streams")
+    .select("id, title, description, status, access, playback_url, starts_at, ends_at, event_id, host_profile_id, events(title, slug, starts_at)")
+    .in("status", ["live", "draft", "ended"])
     .order("starts_at", { ascending: false, nullsFirst: false });
 
   if (error) {

@@ -3,8 +3,30 @@ import Image from "next/image";
 import { getCurrentProfile } from "@/lib/auth";
 import { getAppSettings, getPublicLiveStreams } from "@/lib/queries";
 
-function isEmbeddable(url: string) {
-  return url.includes("youtube.com/embed") || url.includes("player.vimeo.com");
+function getEmbeddableUrl(url: string) {
+  const value = url.trim();
+
+  if (value.includes("youtube.com/embed") || value.includes("player.vimeo.com")) {
+    return value;
+  }
+
+  try {
+    const parsed = new URL(value);
+
+    if (parsed.hostname.includes("youtu.be")) {
+      const id = parsed.pathname.replace("/", "");
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+
+    if (parsed.hostname.includes("youtube.com")) {
+      const id = parsed.searchParams.get("v");
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
 }
 
 export default async function LivePage() {
@@ -13,6 +35,9 @@ export default async function LivePage() {
     getPublicLiveStreams(),
     getCurrentProfile(),
   ]);
+  const liveStreams = streams.filter((stream) => stream.status === "live");
+  const upcomingStreams = streams.filter((stream) => stream.status === "draft");
+  const previousStreams = streams.filter((stream) => stream.status === "ended");
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#030b2b]">
@@ -75,7 +100,7 @@ export default async function LivePage() {
         ) : (
           <div className="space-y-20">
             {/* LIVE NOW */}
-            {streams.filter(s => s.status === 'live').length > 0 && (
+            {liveStreams.length > 0 && (
               <div className="space-y-8">
                 <h2 className="text-3xl font-bold text-white border-b border-[#72dfff]/20 pb-4 flex items-center gap-3">
                   <span className="relative flex h-4 w-4">
@@ -85,9 +110,10 @@ export default async function LivePage() {
                   Live Now
                 </h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {streams.filter(s => s.status === 'live').map((stream) => {
+                  {liveStreams.map((stream) => {
                     const eventRelation = stream.events as { title?: string; slug?: string; starts_at?: string } | Array<{ title?: string; slug?: string; starts_at?: string }> | null;
                     const event = Array.isArray(eventRelation) ? eventRelation[0] : eventRelation;
+                    const embedUrl = stream.playback_url ? getEmbeddableUrl(stream.playback_url) : null;
                     return (
                       <article 
                         key={stream.id} 
@@ -112,9 +138,9 @@ export default async function LivePage() {
 
                         {stream.playback_url ? (
                           <div className="mt-4 relative z-10">
-                            {isEmbeddable(stream.playback_url) ? (
+                            {embedUrl ? (
                               <iframe
-                                src={stream.playback_url}
+                                src={embedUrl}
                                 title={stream.title}
                                 className="w-full aspect-video rounded-xl border border-[#72dfff]/50 shadow-[0_0_15px_rgba(114,223,255,0.3)]"
                                 allow="autoplay; encrypted-media; picture-in-picture"
@@ -153,11 +179,11 @@ export default async function LivePage() {
             )}
 
             {/* UPCOMING STREAMS */}
-            {streams.filter(s => s.status === 'scheduled' || s.status === 'draft').length > 0 && (
+            {upcomingStreams.length > 0 && (
               <div className="space-y-8">
                 <h2 className="text-3xl font-bold text-white border-b border-white/10 pb-4 text-white/90">Upcoming Streams</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {streams.filter(s => s.status === 'scheduled' || s.status === 'draft').map((stream) => {
+                  {upcomingStreams.map((stream) => {
                     const eventRelation = stream.events as { title?: string; slug?: string; starts_at?: string } | Array<{ title?: string; slug?: string; starts_at?: string }> | null;
                     const event = Array.isArray(eventRelation) ? eventRelation[0] : eventRelation;
                     return (
@@ -202,13 +228,14 @@ export default async function LivePage() {
             )}
 
             {/* PREVIOUS STREAMS */}
-            {streams.filter(s => s.status === 'completed').length > 0 && (
+            {previousStreams.length > 0 && (
               <div className="space-y-8">
                 <h2 className="text-3xl font-bold text-white/60 border-b border-white/5 pb-4">Previous Streams</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {streams.filter(s => s.status === 'completed').map((stream) => {
+                  {previousStreams.map((stream) => {
                     const eventRelation = stream.events as { title?: string; slug?: string; starts_at?: string } | Array<{ title?: string; slug?: string; starts_at?: string }> | null;
                     const event = Array.isArray(eventRelation) ? eventRelation[0] : eventRelation;
+                    const embedUrl = stream.playback_url ? getEmbeddableUrl(stream.playback_url) : null;
                     return (
                       <article 
                         key={stream.id} 
@@ -220,7 +247,7 @@ export default async function LivePage() {
                             <p className="text-white/50 text-base leading-relaxed line-clamp-2">{stream.description ?? "No description."}</p>
                           </div>
                           <span className="shrink-0 rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white/50">
-                            COMPLETED
+                            ENDED
                           </span>
                         </div>
                         
@@ -233,9 +260,9 @@ export default async function LivePage() {
 
                         {stream.playback_url ? (
                           <div className="mt-4">
-                            {isEmbeddable(stream.playback_url) ? (
+                            {embedUrl ? (
                               <iframe
-                                src={stream.playback_url}
+                                src={embedUrl}
                                 title={stream.title}
                                 className="w-full aspect-video rounded-xl border border-white/10 opacity-70 hover:opacity-100 transition-opacity"
                                 allow="autoplay; encrypted-media; picture-in-picture"

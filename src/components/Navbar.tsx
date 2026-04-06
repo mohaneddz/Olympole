@@ -59,14 +59,29 @@ const navItems = [
   },
   { name: "Live", href: "/live" },
   { name: "Schedule", href: "/schedule" },
-  { name: "Predictions", href: "/predictions" },
+  {
+    name: "Predictions",
+    href: "/predictions/matches",
+    children: [
+      {
+        name: "Match Predictions",
+        description: "Upcoming matches, votes, and final results",
+        href: "/predictions/matches",
+      },
+      {
+        name: "Olympole Fantasy",
+        description: "Build your lineup in pitch or list view",
+        href: "/predictions/fantasy",
+      },
+    ],
+  },
 ];
 
 export async function Navbar() {
   const profile = await getCurrentProfile();
 
   return (
-    <header className="sticky top-0 z-50 w-full overflow-visible bg-[linear-gradient(90deg,rgba(2,22,56,0.75),rgba(0,40,92,0.8),rgba(2,22,56,0.75))] shadow-lg backdrop-blur-xl">
+    <header className="sticky top-0 z-50 w-full overflow-visible bg-[linear-gradient(90deg,rgba(2,22,56,0.68),rgba(0,40,92,0.72),rgba(2,22,56,0.68))] shadow-lg backdrop-blur-xl">
       <div className="relative mx-auto flex min-h-20 w-full max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
         <Link href="/" className="relative z-10 flex min-w-0 items-center gap-3">
           <Image

@@ -3,14 +3,20 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ComponentType } from "react";
 import {
-  scoreMatchPredictionsAction,
   updateMatchAction,
 } from "@/app/actions/events";
 import {
   getEventIconComponent,
   getMatchIconKey,
 } from "@/lib/event-icons";
-import { Layers3, Palette, Shield, Trophy } from "lucide-react";
+import {
+  Activity,
+  Palette,
+  Shield,
+  Trophy,
+  UsersRound,
+} from "lucide-react";
+import { useRef } from "react";
 
 type MatchItem = {
   id: string;
@@ -46,19 +52,7 @@ type SportMeta = {
 };
 
 type ActivityTab = "culture" | "individual" | "collective";
-
-function getStatusTone(status: string) {
-  if (status === "live") {
-    return "border-emerald-300/35 bg-emerald-400/10 text-emerald-100";
-  }
-  if (status === "completed") {
-    return "border-cyan-300/35 bg-cyan-400/10 text-cyan-100";
-  }
-  if (status === "scheduled") {
-    return "border-sky-300/35 bg-sky-400/10 text-sky-100";
-  }
-  return "border-white/15 bg-white/5 text-white/80";
-}
+type MatchStatus = MatchItem["status"];
 
 const tabMeta: Record<ActivityTab, { label: string; icon: ComponentType<{ className?: string }> }> = {
   culture: { label: "Culture", icon: Palette },
@@ -68,6 +62,158 @@ const tabMeta: Record<ActivityTab, { label: string; icon: ComponentType<{ classN
 
 function normalize(value: string) {
   return value.trim().toLowerCase();
+}
+
+function nextStatus(status: MatchStatus): MatchStatus {
+  if (status === "scheduled") return "live";
+  if (status === "live") return "completed";
+  return "scheduled";
+}
+
+function getStatusButtonTone(status: MatchStatus) {
+  if (status === "live") {
+    return "border-emerald-300/45 bg-emerald-400/15 text-emerald-100";
+  }
+  if (status === "completed") {
+    return "border-cyan-300/45 bg-cyan-400/15 text-cyan-100";
+  }
+  return "border-sky-300/45 bg-sky-400/15 text-sky-100";
+}
+
+function MatchCard({
+  match,
+  eventTitle,
+  activityType,
+}: {
+  match: MatchItem;
+  eventTitle: string;
+  activityType: SportMeta["sport_type"] | null;
+}) {
+  const MatchIcon = getEventIconComponent(getMatchIconKey(match.sport, match.status));
+  const [status, setStatus] = useState<MatchStatus>(match.status);
+  const [submitOnStatusChange, setSubmitOnStatusChange] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const usingTeams = activityType === "collective";
+  const sideALabel = usingTeams ? "Team A" : "Side A";
+  const sideBLabel = usingTeams ? "Team B" : "Side B";
+
+  useEffect(() => {
+    setStatus(match.status);
+  }, [match.status]);
+
+  useEffect(() => {
+    if (!submitOnStatusChange) return;
+    formRef.current?.requestSubmit();
+    setSubmitOnStatusChange(false);
+  }, [status, submitOnStatusChange]);
+
+  function submitForm() {
+    formRef.current?.requestSubmit();
+  }
+
+  return (
+    <form ref={formRef} action={updateMatchAction} className="group rounded-2xl border border-cyan-200/20 bg-gradient-to-br from-[#0f1f3f] via-[#0a1737] to-[#051024] p-5 shadow-[0_20px_40px_rgba(0,0,0,0.8)] transition hover:border-cyan-200/30 hover:shadow-[0_25px_50px_rgba(0,168,228,0.15)]">
+      <input type="hidden" name="id" value={match.id} />
+      <input type="hidden" name="match_id" value={match.id} />
+      <input type="hidden" name="event_id" value={match.event_id} />
+      <input type="hidden" name="sport" value={match.sport} />
+      <input type="hidden" name="team_a" value={match.team_a} />
+      <input type="hidden" name="team_b" value={match.team_b} />
+      <input type="hidden" name="team_a_id" value={match.team_a_id ?? ""} />
+      <input type="hidden" name="team_b_id" value={match.team_b_id ?? ""} />
+      <input type="hidden" name="round" value={match.round} />
+      <input type="hidden" name="venue" value={match.venue} />
+      <input type="hidden" name="starts_at" value={new Date(match.starts_at).toISOString()} />
+      <input type="hidden" name="event_phase" value={match.event_phase ?? "group"} />
+      <input type="hidden" name="notes" value={match.notes ?? ""} />
+      <input type="hidden" name="status" value={status} />
+      <input type="hidden" name="mvp_player" value={match.mvp_player ?? ""} />
+      <input type="hidden" name="is_prediction_locked" value={String(match.is_prediction_locked ?? false)} />
+
+      {/* Header */}
+      <div className="mb-5 flex items-start justify-between gap-3 pb-5 border-b border-cyan-300/15">
+        <div className="flex items-start gap-3.5 min-w-0 flex-1">
+          <div className="flex-shrink-0 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/25 to-cyan-400/10 border border-cyan-300/50 text-cyan-300 group-hover:from-cyan-500/35 group-hover:border-cyan-300/70 transition">
+            <MatchIcon className="h-6 w-6" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-bold text-white/95 truncate uppercase tracking-tight">{match.team_a} vs {match.team_b}</h3>
+            <p className="mt-1.5 text-xs text-cyan-200/60 truncate">{eventTitle}</p>
+          </div>
+        </div>
+        <div className="flex-shrink-0 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => alert("Player Performances Setup - Simulated Dialog")}
+            className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500/20 to-sky-600/20 border border-cyan-400/40 text-xs font-semibold text-cyan-100 transition hover:from-cyan-500/30 hover:to-sky-600/30 hover:border-cyan-300/60 active:scale-95 whitespace-nowrap"
+          >
+            Set Performances
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setStatus((value) => nextStatus(value));
+              setSubmitOnStatusChange(true);
+            }}
+            className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition ${getStatusButtonTone(status)}`}
+          >
+            {status}
+          </button>
+        </div>
+      </div>
+
+      {/* Teams & Scores */}
+      <div className="grid grid-cols-2 gap-3.5 mb-5">
+        {/* Team A */}
+        <label className="group/input rounded-xl bg-gradient-to-br from-[#0a1d40]/50 to-[#051024]/70 border border-cyan-300/20 p-3.5 transition hover:border-cyan-300/40 hover:from-[#0c1f45]/70 hover:to-[#061128]/80">
+          <div className="flex items-center gap-2.5 mb-2.5">
+            <UsersRound className="h-4 w-4 text-cyan-400/70" />
+            <span className="text-xs font-bold text-cyan-300/80 uppercase tracking-wider">{sideALabel}</span>
+          </div>
+          <input
+            name="team_a"
+            type="text"
+            defaultValue={match.team_a}
+            onBlur={submitForm}
+            placeholder="Team name"
+            className="block w-full mb-2.5 h-8 px-2.5 py-1 rounded-lg bg-[#051024]/60 border border-cyan-300/15 text-sm text-cyan-50 placeholder-cyan-300/25 focus:outline-none focus:border-cyan-300/60 focus:bg-[#051024]/80 transition"
+          />
+          <input
+            name="score_a"
+            type="number"
+            defaultValue={match.score_a}
+            onBlur={submitForm}
+            placeholder="0"
+            className="admin-score-input block w-full h-12 px-3 py-2 rounded-lg bg-[#051024]/60 border border-cyan-300/15 text-center text-3xl font-bold text-cyan-300 placeholder-cyan-300/25 focus:outline-none focus:border-cyan-300/60 focus:bg-[#051024]/80 transition"
+          />
+        </label>
+
+        {/* Team B */}
+        <label className="group/input rounded-xl bg-gradient-to-br from-[#0a1d40]/50 to-[#051024]/70 border border-cyan-300/20 p-3.5 transition hover:border-cyan-300/40 hover:from-[#0c1f45]/70 hover:to-[#061128]/80">
+          <div className="flex items-center gap-2.5 mb-2.5">
+            <UsersRound className="h-4 w-4 text-cyan-400/70" />
+            <span className="text-xs font-bold text-cyan-300/80 uppercase tracking-wider">{sideBLabel}</span>
+          </div>
+          <input
+            name="team_b"
+            type="text"
+            defaultValue={match.team_b}
+            onBlur={submitForm}
+            placeholder="Team name"
+            className="block w-full mb-2.5 h-8 px-2.5 py-1 rounded-lg bg-[#051024]/60 border border-cyan-300/15 text-sm text-cyan-50 placeholder-cyan-300/25 focus:outline-none focus:border-cyan-300/60 focus:bg-[#051024]/80 transition"
+          />
+          <input
+            name="score_b"
+            type="number"
+            defaultValue={match.score_b}
+            onBlur={submitForm}
+            placeholder="0"
+            className="admin-score-input block w-full h-12 px-3 py-2 rounded-lg bg-[#051024]/60 border border-cyan-300/15 text-center text-3xl font-bold text-cyan-300 placeholder-cyan-300/25 focus:outline-none focus:border-cyan-300/60 focus:bg-[#051024]/80 transition"
+          />
+        </label>
+      </div>
+    </form>
+  );
 }
 
 export function MatchesManagementBoard({
@@ -200,91 +346,18 @@ export function MatchesManagementBoard({
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         {visibleMatches.map((match) => {
-          const MatchIcon = getEventIconComponent(getMatchIconKey(match.sport, match.status));
           const eventTitle = eventMap.get(match.event_id)?.title ?? "Unknown Event";
+          const activityType =
+            safeSports.find((sport) => sport.id === selectedActivityId)?.sport_type ?? null;
 
           return (
-            <form key={match.id} action={updateMatchAction} className="rounded-xl border border-cyan-200/15 bg-[linear-gradient(160deg,rgba(10,22,54,0.84),rgba(6,13,34,0.92))] p-3 shadow-[0_8px_20px_rgba(2,10,28,0.36)]">
-            <input type="hidden" name="id" value={match.id} />
-            <input type="hidden" name="match_id" value={match.id} />
-            <input type="hidden" name="event_id" value={match.event_id} />
-            <input type="hidden" name="sport" value={match.sport} />
-            <input type="hidden" name="team_a" value={match.team_a} />
-            <input type="hidden" name="team_b" value={match.team_b} />
-            <input type="hidden" name="team_a_id" value={match.team_a_id ?? ""} />
-            <input type="hidden" name="team_b_id" value={match.team_b_id ?? ""} />
-            <input type="hidden" name="round" value={match.round} />
-            <input type="hidden" name="venue" value={match.venue} />
-            <input type="hidden" name="starts_at" value={new Date(match.starts_at).toISOString()} />
-            <input type="hidden" name="event_phase" value={match.event_phase ?? "group"} />
-            <input type="hidden" name="notes" value={match.notes ?? ""} />
-
-            <div className="mb-2 flex flex-wrap items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-cyan-300/30 bg-cyan-400/10 text-cyan-100">
-                <MatchIcon className="h-4 w-4" />
-              </span>
-              <div className="flex-1">
-                <p className="font-semibold leading-tight text-white">{match.team_a} vs {match.team_b}</p>
-                <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
-                  <span className="rounded-md border border-white/15 bg-white/5 px-2 py-1 text-white/70">{eventTitle}</span>
-                  <span className="rounded-md border border-white/15 bg-white/5 px-2 py-1 text-white/70">{match.sport}</span>
-                  <span className={`rounded-md border px-2 py-1 ${getStatusTone(match.status)}`}>{match.status}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2">
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                <div className="rounded-lg border border-cyan-200/15 bg-[#071733]/80 p-2.5">
-                  <p className="mb-1.5 text-[10px] uppercase tracking-[0.14em] text-cyan-100/65">Score</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <p className="mb-1 truncate text-[11px] text-cyan-100/70">{match.team_a}</p>
-                      <input name="score_a" type="number" defaultValue={match.score_a} className="admin-score-input h-9 w-full rounded-md border border-cyan-200/20 bg-[#0a1737] px-2 text-cyan-50" />
-                    </div>
-                    <div>
-                      <p className="mb-1 truncate text-[11px] text-cyan-100/70">{match.team_b}</p>
-                      <input name="score_b" type="number" defaultValue={match.score_b} className="admin-score-input h-9 w-full rounded-md border border-cyan-200/20 bg-[#0a1737] px-2 text-cyan-50" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-cyan-200/15 bg-[#071733]/80 p-2.5">
-                  <p className="mb-1.5 text-[10px] uppercase tracking-[0.14em] text-cyan-100/65">Status</p>
-                  <select name="status" defaultValue={match.status} className="h-9 w-full rounded-md border border-cyan-200/20 bg-[#0a1737] px-2 text-cyan-50">
-                    <option value="scheduled">scheduled</option>
-                    <option value="live">live</option>
-                    <option value="completed">completed</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                <div className="rounded-lg border border-cyan-200/15 bg-[#071733]/80 p-2.5">
-                  <p className="mb-1.5 text-[10px] uppercase tracking-[0.14em] text-cyan-100/65">MVP</p>
-                  <input name="mvp_player" defaultValue={match.mvp_player ?? ""} placeholder="MVP player" className="h-9 w-full rounded-md border border-cyan-200/20 bg-[#0a1737] px-2 text-cyan-50" />
-                </div>
-
-                <div className="rounded-lg border border-cyan-200/15 bg-[#071733]/80 p-2.5">
-                  <p className="mb-1.5 text-[10px] uppercase tracking-[0.14em] text-cyan-100/65">Predictions</p>
-                  <select name="is_prediction_locked" defaultValue={String(match.is_prediction_locked)} className="h-9 w-full rounded-md border border-cyan-200/20 bg-[#0a1737] px-2 text-cyan-50">
-                    <option value="false">predictions open</option>
-                    <option value="true">predictions locked</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                <button className="h-9 rounded-md border border-cyan-300/35 bg-cyan-400/10 px-3 text-sm text-cyan-100 transition hover:bg-cyan-400/20">
-                  Save
-                </button>
-                <button formAction={scoreMatchPredictionsAction} className="h-9 rounded-md border border-amber-300/35 bg-amber-300/10 px-3 text-sm text-amber-100 transition hover:bg-amber-300/20">
-                  Score Picks
-                </button>
-              </div>
-            </div>
-          </form>
-        );
+            <MatchCard
+              key={match.id}
+              match={match}
+              eventTitle={eventTitle}
+              activityType={activityType}
+            />
+          );
         })}
       </div>
 
