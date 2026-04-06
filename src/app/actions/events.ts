@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { failure, success, type ActionResponse } from "@/lib/actions";
 import { getCurrentUser, requireAdmin } from "@/lib/auth";
 import { normalizeEventIconKey } from "@/lib/event-icons";
@@ -648,6 +649,55 @@ export async function createLiveStreamAction(formData: FormData): Promise<void> 
   }
 
   await logAdmin("live_stream_create", "live_stream", data?.id ?? null);
+  revalidatePath("/admin/live");
+  revalidatePath("/admin/live/new");
+  revalidatePath("/live");
+  redirect("/admin/live");
+}
+
+export async function updateLiveStreamDetailsAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) {
+    return;
+  }
+
+  const parsed = liveStreamSchema.safeParse({
+    title: formData.get("title"),
+    description: formData.get("description"),
+    event_id: formData.get("event_id"),
+    playback_url: formData.get("playback_url"),
+    status: formData.get("status"),
+    access: formData.get("access"),
+    starts_at: formData.get("starts_at"),
+    ends_at: formData.get("ends_at"),
+  });
+
+  if (!parsed.success) {
+    return;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("live_streams")
+    .update({
+      title: parsed.data.title,
+      description: parsed.data.description || null,
+      event_id: parsed.data.event_id || null,
+      playback_url: parsed.data.playback_url || null,
+      status: parsed.data.status,
+      access: parsed.data.access,
+      starts_at: parsed.data.starts_at ? toIsoString(parsed.data.starts_at) : null,
+      ends_at: parsed.data.ends_at ? toIsoString(parsed.data.ends_at) : null,
+    })
+    .eq("id", id);
+
+  if (error) {
+    return;
+  }
+
+  await logAdmin("live_stream_update", "live_stream", id);
   revalidatePath("/admin/live");
   revalidatePath("/live");
 }
