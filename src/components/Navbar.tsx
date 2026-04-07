@@ -4,77 +4,11 @@ import { Button } from "@/components/ui/Button";
 import { getCurrentProfile } from "@/lib/auth";
 
 const navItems = [
-  // { name: "Home", href: "/" },
-  {
-    name: "Sports",
-    href: "/sports",
-    children: [
-      {
-        name: "Football",
-        description: "Fixtures, standings, and live football updates",
-        href: "/sports?category=football",
-      },
-      {
-        name: "Basketball",
-        description: "Latest basketball games and team highlights",
-        href: "/sports?category=basketball",
-      },
-      {
-        name: "Match Center",
-        description: "Live match hub with scores and key moments",
-        href: "/match-center",
-      },
-      {
-        name: "Results",
-        description: "All final scores and completed match results",
-        href: "/results",
-      },
-    ],
-  },
-  {
-    name: "Culture",
-    href: "/culture",
-    children: [
-      {
-        name: "Art",
-        description: "Creative showcases and visual submissions",
-        href: "/culture/art",
-      },
-      {
-        name: "Talent",
-        description: "Performances and talents from club members",
-        href: "/culture/talent",
-      },
-      {
-        name: "Writing",
-        description: "Stories, essays, and literary contributions",
-        href: "/culture/writing",
-      },
-      {
-        name: "Overview",
-        description: "Explore all cultural activities in one place",
-        href: "/culture",
-      },
-    ],
-  },
+  { name: "Sports", href: "/sports" },
+  { name: "Culture", href: "/culture" },
   { name: "Live", href: "/live" },
   { name: "Schedule", href: "/schedule" },
-  {
-    name: "Predictions",
-    href: "/predictions/matches",
-    children: [
-      {
-        name: "Match Predictions",
-        description: "Upcoming matches, votes, and final results",
-        href: "/predictions/matches",
-      },
-      {
-        name: "Olympole Fantasy",
-        description: "Build your lineup in pitch or list view",
-        href: "/predictions/fantasy",
-      },
-    ],
-  },
+  { name: "Predictions", href: "/predictions" },
 ];
 
 export async function Navbar() {
@@ -99,36 +33,14 @@ export async function Navbar() {
 
         <nav className="absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-7 md:flex lg:gap-9">
           {navItems.map((item) => (
-            <div key={item.href} className="group/navitem relative">
-              <Link
-                href={item.href}
-                className="group relative block py-2 text-sm font-semibold tracking-[0.08em] text-cyan-50/85 transition-colors duration-300 hover:text-white lg:text-base"
-              >
-                {item.name}
-                <span className="pointer-events-none absolute -bottom-1 left-0 right-0 h-0.5 origin-left scale-x-0 rounded-full bg-cyan-300 transition-transform duration-300 group-hover/navitem:scale-x-100" />
-              </Link>
-
-              {item.children?.length ? (
-                <div className="pointer-events-none absolute left-0 top-full z-30 w-72 translate-x-2 translate-y-1 pt-3 opacity-0 transition-all duration-200 group-hover/navitem:pointer-events-auto group-hover/navitem:translate-y-0 group-hover/navitem:opacity-100">
-                  <div className="rounded-2xl border border-cyan-300/35 bg-[linear-gradient(135deg,rgba(2,22,56,0.96),rgba(0,40,92,0.93))] p-2 shadow-[0_14px_38px_rgba(0,16,44,0.55)] backdrop-blur-xl">
-                    {item.children.map((child) => (
-                      <Link
-                        key={child.href}
-                        href={child.href}
-                        className="block rounded-xl px-3 py-2.5 transition-colors hover:bg-cyan-300/10"
-                      >
-                        <span className="block text-sm font-semibold tracking-[0.04em] text-cyan-50/95">
-                          {child.name}
-                        </span>
-                        <span className="mt-0.5 block text-xs leading-relaxed text-cyan-100/65">
-                          {child.description}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </div>
+            <Link
+              key={item.href}
+              href={item.href}
+              className="group relative block py-2 text-sm font-semibold tracking-[0.08em] text-cyan-50/85 transition-colors duration-300 hover:text-white lg:text-base"
+            >
+              {item.name}
+              <span className="pointer-events-none absolute -bottom-1 left-0 right-0 h-0.5 origin-left scale-x-0 rounded-full bg-cyan-300 transition-transform duration-300 group-hover:scale-x-100" />
+            </Link>
           ))}
         </nav>
 
@@ -138,9 +50,12 @@ export async function Navbar() {
               <Link href="/profile">Profile</Link>
             </Button>
           ) : (
-            <Button variant="neonPill" size="pill" asChild>
-              <Link href="/register">Register</Link>
-            </Button>
+            <Link
+              href="/login"
+              className="text-sm font-semibold tracking-[0.08em] text-cyan-50/90 transition-colors hover:text-white lg:text-base"
+            >
+              Sign in
+            </Link>
           )}
         </div>
 
@@ -157,32 +72,13 @@ export async function Navbar() {
           <div className="absolute right-0 top-[calc(100%+0.7rem)] w-[min(18rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-cyan-300/35 bg-[linear-gradient(135deg,rgba(2,22,56,0.96),rgba(0,40,92,0.93))] shadow-[0_14px_38px_rgba(0,16,44,0.55)] backdrop-blur-xl">
             <nav className="flex flex-col p-2">
               {navItems.map((item) => (
-                <div key={item.href} className="rounded-xl">
-                  <Link
-                    href={item.href}
-                    className="block rounded-xl px-4 py-3 text-sm font-semibold tracking-[0.08em] text-cyan-50/90 transition-colors hover:bg-cyan-300/10 hover:text-white"
-                  >
-                    {item.name}
-                  </Link>
-                  {item.children?.length ? (
-                    <div className="pb-2 pl-6 pr-3">
-                      {item.children.map((child) => (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          className="block rounded-lg px-3 py-2 transition-colors hover:bg-cyan-300/10"
-                        >
-                          <span className="block text-xs font-semibold tracking-[0.06em] text-cyan-100/90">
-                            {child.name}
-                          </span>
-                          <span className="mt-0.5 block text-xs leading-relaxed text-cyan-100/65">
-                            {child.description}
-                          </span>
-                        </Link>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="block rounded-xl px-4 py-3 text-sm font-semibold tracking-[0.08em] text-cyan-50/90 transition-colors hover:bg-cyan-300/10 hover:text-white"
+                >
+                  {item.name}
+                </Link>
               ))}
             </nav>
             <div className="border-t border-cyan-300/25 p-2">
@@ -191,9 +87,12 @@ export async function Navbar() {
                   <Link href="/profile">Profile</Link>
                 </Button>
               ) : (
-                <Button variant="neonPill" asChild className="h-10 w-full px-4 text-base">
-                  <Link href="/register">Register</Link>
-                </Button>
+                <Link
+                  href="/login"
+                  className="block rounded-xl px-4 py-3 text-center text-base font-semibold tracking-[0.08em] text-cyan-50/90 transition-colors hover:bg-cyan-300/10 hover:text-white"
+                >
+                  Sign in
+                </Link>
               )}
             </div>
           </div>
