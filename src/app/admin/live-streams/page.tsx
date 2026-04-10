@@ -1,6 +1,6 @@
 import { AdminLiveStreamsDashboard } from "@/components/admin/AdminLiveStreamsDashboard";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
-import { CreateLiveStreamDialog } from "@/components/admin/CreateLiveStreamDialog";
+import { LiveStreamFormDialog } from "@/components/admin/LiveStreamFormDialog";
 import { requireAdmin } from "@/lib/auth";
 import { getAdminLiveStreams, getAllAdminEvents } from "@/lib/queries";
 import { Radio } from "lucide-react";
@@ -32,7 +32,8 @@ export default async function AdminLiveStreamsPage() {
         title="Live Streams"
         description="Manage stream rows from one table and keep publishing controls simple."
         actions={
-          <CreateLiveStreamDialog 
+          <LiveStreamFormDialog 
+            mode="create"
             events={events.map((event) => ({ id: event.id, title: event.title }))} 
           />
         }

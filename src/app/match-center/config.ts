@@ -1,4 +1,4 @@
-const DEFAULT_FANTASY_PLAYER_COUNT = 11;
+const DEFAULT_FANTASY_PLAYER_COUNT = 8;
 
 function resolveFantasyPlayerCount() {
   const raw = process.env.NEXT_PUBLIC_FANTASY_NUMBER;

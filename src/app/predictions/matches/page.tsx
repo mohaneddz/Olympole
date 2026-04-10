@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function PredictionMatchesPage() {
-  redirect("/predictions#matches");
+  redirect("/predictions#fantasy");
 }
