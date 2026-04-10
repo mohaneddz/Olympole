@@ -10,7 +10,7 @@ export default async function AdminUsersPage() {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, full_name, email, school, year_of_study, username, phone, avatar_url, role, created_at, last_seen_at")
+    .select("id, full_name, email, school, year_of_study, student_id, username, phone, avatar_url, role, created_at, last_seen_at")
     .order("created_at", { ascending: false })
     .limit(1000);
 
@@ -32,3 +32,4 @@ export default async function AdminUsersPage() {
     </div>
   );
 }
+

@@ -28,10 +28,11 @@ export async function getPublicEvents() {
   const { data, error } = await supabase
     .from("events")
     .select(
-      "id, title, slug, type, category, venue, starts_at, ends_at, status, description, sport_id, is_featured, is_registration_open, current_round, max_participants, registration_deadline, sports(name, slug)"
+      "id, title, slug, type, category, venue, starts_at, ends_at, status, description, sport_id, activity_id, show_in_schedule, is_featured, is_registration_open, current_round, max_participants, registration_deadline, sports(name, slug, sport_type), activities(title, slug, category)"
     )
+    .eq("show_in_schedule", true)
     .eq("visibility", "public")
-    .in("status", ["scheduled", "live", "completed"])
+    .gte("starts_at", new Date().toISOString())
     .order("starts_at", { ascending: true });
 
   if (error) {
@@ -46,9 +47,23 @@ export async function getAllAdminEvents() {
   const { data, error } = await supabase
     .from("events")
     .select(
-      "id, title, slug, type, category, venue, starts_at, ends_at, status, description, sport_id, is_featured, is_registration_open, current_round, max_participants, registration_deadline, visibility, sports(name, slug)"
+      "id, title, slug, type, category, venue, starts_at, ends_at, status, description, sport_id, activity_id, show_in_schedule, is_featured, is_registration_open, current_round, max_participants, registration_deadline, visibility, sports(name, slug, sport_type), activities(title, slug, category)"
     )
     .order("starts_at", { ascending: true });
+
+  if (error) {
+    return [];
+  }
+
+  return data ?? [];
+}
+
+export async function getAdminActivities() {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("activities")
+    .select("id, slug, title, category, is_active, display_order")
+    .order("display_order", { ascending: true });
 
   if (error) {
     return [];
@@ -187,9 +202,9 @@ export async function getAppSettings(): Promise<AppSettings> {
 export async function getUserRegistrations(userId: string) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
-    .from("registrations")
+    .from("v_profile_activity_registrations")
     .select(
-      "id, event_id, full_name, email, phone, department_or_school, category_type, team_name, additional_notes, status, attendance_status, created_at, events(title, slug, starts_at, status, venue)"
+      "id, activity_slug, activity_title, category_type, event_id, event_title, event_slug, event_starts_at, event_status, event_venue, full_name, email, phone, department_or_school, team_name, additional_notes, status, attendance_status, created_at"
     )
     .eq("user_id", userId)
     .order("created_at", { ascending: false });

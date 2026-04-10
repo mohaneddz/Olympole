@@ -7,18 +7,10 @@ import {
   getRegistrationDraftCookieName,
   parseRegistrationDraftCookie,
 } from "@/lib/cookie-drafts";
+import { getManagedActivityBySlug } from "@/lib/activity-registry";
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
 import { getAppSettings } from "@/lib/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-function readDetail(details: unknown, key: string) {
-  if (!details || typeof details !== "object" || Array.isArray(details)) {
-    return "";
-  }
-
-  const value = (details as Record<string, unknown>)[key];
-  return typeof value === "string" ? value : "";
-}
 
 function pickFirstNonEmpty(...values: Array<string | null | undefined>) {
   for (const value of values) {
@@ -29,6 +21,33 @@ function pickFirstNonEmpty(...values: Array<string | null | undefined>) {
   return "";
 }
 
+function getActivityRegistrationSelect(slug: string) {
+  const baseSelect =
+    "id, event_id, status, created_at, full_name, email, phone, department_or_school, team_name, additional_notes, emergency_contact, previous_experience, motivation, preferred_role, events(id,title,starts_at,venue,status,is_registration_open)";
+
+  if (["football", "basketball", "handball", "volleyball"].includes(slug)) {
+    return `${baseSelect}, detail_gender`;
+  }
+
+  if (slug === "chess") {
+    return `${baseSelect}, detail_competition_level, detail_elo_rating`;
+  }
+
+  if (slug === "running") {
+    return `${baseSelect}, detail_competition_level`;
+  }
+
+  if (slug === "talent-show") {
+    return `${baseSelect}, detail_talent_type, detail_performance_description`;
+  }
+
+  if (slug === "art-exhibition") {
+    return `${baseSelect}, detail_art_category`;
+  }
+
+  return baseSelect;
+}
+
 export default async function ActivityRegistrationPage({
   params,
 }: {
@@ -37,6 +56,11 @@ export default async function ActivityRegistrationPage({
   const { activity: activitySlug } = await params;
   const activity = getRegistrationActivityBySlug(activitySlug);
   if (!activity) {
+    notFound();
+  }
+
+  const managedActivity = getManagedActivityBySlug(activity.slug);
+  if (!managedActivity) {
     notFound();
   }
 
@@ -94,18 +118,15 @@ export default async function ActivityRegistrationPage({
   const [{ data: events }, { data: existingRows }] = await Promise.all([
     supabase
       .from("events")
-      .select("id, title, starts_at, venue, status, is_registration_open, sports!inner(slug)")
-      .eq("sports.slug", activity.slug)
+      .select("id, title, starts_at, venue, status, is_registration_open, activities!inner(slug)")
+      .eq("activities.slug", activity.slug)
       .eq("is_registration_open", true)
       .in("status", ["scheduled", "live"])
       .order("starts_at", { ascending: true }),
-    supabase
-      .from("registrations")
-      .select(
-        "id, event_id, status, created_at, full_name, email, phone, department_or_school, team_name, additional_notes, emergency_contact, previous_experience, motivation, availability_date, preferred_role, registration_details, events(id,title,starts_at,venue,status,is_registration_open)"
-      )
+    (supabase as any)
+      .from(managedActivity.tableName)
+      .select(getActivityRegistrationSelect(activity.slug))
       .eq("user_id", user.id)
-      .eq("activity_slug", activity.slug)
       .order("created_at", { ascending: false })
       .limit(1),
   ]);
@@ -146,8 +167,6 @@ export default async function ActivityRegistrationPage({
   const draft = parseRegistrationDraftCookie(
     cookieStore.get(getRegistrationDraftCookieName(activity.slug))?.value
   );
-
-  const details = existingRegistration?.registration_details;
 
   const defaultEventId = existingRegistration?.event_id ?? draft?.event_id ?? allEvents[0]?.id ?? "";
 
@@ -190,13 +209,12 @@ export default async function ActivityRegistrationPage({
           availability_date: "",
           preferred_role: existingRegistration?.preferred_role ?? draft?.preferred_role ?? "",
           additional_notes: "",
-          detail_gender: readDetail(details, "gender") || draft?.detail_gender || (activity.slug === "football" ? "men" : ""),
-          detail_competition_level: readDetail(details, "competition_level") || draft?.detail_competition_level || "",
-          detail_race_category: readDetail(details, "race_category") || draft?.detail_race_category || "",
-          detail_elo_rating: readDetail(details, "elo_rating") || draft?.detail_elo_rating || "",
-          detail_talent_type: readDetail(details, "talent_type") || draft?.detail_talent_type || "",
-          detail_performance_description: readDetail(details, "performance_description") || draft?.detail_performance_description || "",
-          detail_art_category: readDetail(details, "art_category") || draft?.detail_art_category || "",
+          detail_gender: String(existingRegistration?.detail_gender ?? "") || draft?.detail_gender || (activity.slug === "football" ? "men" : ""),
+          detail_competition_level: String(existingRegistration?.detail_competition_level ?? "") || draft?.detail_competition_level || "",
+          detail_elo_rating: String(existingRegistration?.detail_elo_rating ?? "") || draft?.detail_elo_rating || "",
+          detail_talent_type: String(existingRegistration?.detail_talent_type ?? "") || draft?.detail_talent_type || "",
+          detail_performance_description: String(existingRegistration?.detail_performance_description ?? "") || draft?.detail_performance_description || "",
+          detail_art_category: String(existingRegistration?.detail_art_category ?? "") || draft?.detail_art_category || "",
           detail_strengths: "",
           detail_schedule: "",
         }}

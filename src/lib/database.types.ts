@@ -55,6 +55,16 @@ export interface Database {
           ends_at: string;
           status: EventStatus;
           description: string | null;
+          sport_id: string | null;
+          activity_id: string | null;
+          show_in_schedule: boolean;
+          is_featured: boolean;
+          is_registration_open: boolean;
+          registration_deadline: string | null;
+          max_participants: number | null;
+          visibility: "public" | "private";
+          current_round: string | null;
+          icon_key: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -69,10 +79,43 @@ export interface Database {
           ends_at: string;
           status?: EventStatus;
           description?: string | null;
+          sport_id?: string | null;
+          activity_id?: string | null;
+          show_in_schedule?: boolean;
+          is_featured?: boolean;
+          is_registration_open?: boolean;
+          registration_deadline?: string | null;
+          max_participants?: number | null;
+          visibility?: "public" | "private";
+          current_round?: string | null;
+          icon_key?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["events"]["Insert"]>;
+      };
+      activities: {
+        Row: {
+          id: string;
+          slug: string;
+          title: string;
+          category: "collective_sport" | "individual_sport" | "culture";
+          is_active: boolean;
+          display_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          title: string;
+          category: "collective_sport" | "individual_sport" | "culture";
+          is_active?: boolean;
+          display_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["activities"]["Insert"]>;
       };
       matches: {
         Row: {

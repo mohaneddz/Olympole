@@ -3,8 +3,6 @@
 import { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { SPORTS } from "@/data/sports";
-import { CULTURE_EVENTS } from "@/data/culture";
 import { MapPin, CalendarDays, ChevronRight } from "lucide-react";
 
 type ScheduleClientProps = {
@@ -63,30 +61,25 @@ export default function ScheduleClient({ matches, events }: ScheduleClientProps)
   const filteredData = useMemo(() => {
     let items: any[] = [];
 
-    const collectiveSportNames = SPORTS.filter((s) => s.category === "collective").map((s) => normalize(s.name));
-    const individualSportNames = SPORTS.filter((s) => s.category === "individual").map((s) => normalize(s.name));
-    const cultureSportNames = CULTURE_EVENTS.map((s) => normalize(s.name));
-
     if (activeTab === "Collective Sports") {
-      // Matches that belong to collective sports
-      items = matches.filter((m) => collectiveSportNames.includes(normalize(m.sport)));
-      // Let's just mix them or stick to matches for collective
-      // In design, collective focuses on Team vs Team (matches).
-      items = [...items];
-    } else if (activeTab === "Individual Sports") {
-      // Matches for individual
-      const indMatches = matches.filter((m) => individualSportNames.includes(normalize(m.sport)));
-      // Events for individual
-      const indEvents = events.filter(
-        (e) =>
-          (e.type === "sport" && e.sports?.name && individualSportNames.includes(normalize(e.sports.name))) ||
-          individualSportNames.includes(normalize(e.category || ""))
+      const collectiveEvents = events.filter(
+        (event) =>
+          event.activities?.category === "collective_sport"
+          || event.sports?.sport_type === "collective"
       );
-      items = [...indMatches, ...indEvents];
+      items = [...collectiveEvents];
+    } else if (activeTab === "Individual Sports") {
+      const indEvents = events.filter(
+        (event) =>
+          event.activities?.category === "individual_sport"
+          || event.sports?.sport_type === "individual"
+      );
+      items = [...indEvents];
     } else if (activeTab === "Cultural Events") {
-      // Events for culture
       const cultEvents = events.filter(
-        (e) => e.type === "culture" || cultureSportNames.includes(normalize(e.category || "")) || cultureSportNames.includes(normalize(e.title))
+        (event) =>
+          event.activities?.category === "culture"
+          || event.type === "culture"
       );
       items = [...cultEvents];
     }

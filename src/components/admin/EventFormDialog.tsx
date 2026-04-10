@@ -12,6 +12,14 @@ type SportOption = {
   name: string;
 };
 
+type ActivityOption = {
+  id: string;
+  slug: string;
+  title: string;
+  category: "collective_sport" | "individual_sport" | "culture";
+  is_active?: boolean;
+};
+
 type EventOption = {
   id: string;
   title: string;
@@ -24,6 +32,8 @@ type EventOption = {
   status: "draft" | "scheduled" | "live" | "completed" | "cancelled";
   description: string | null;
   sport_id: string | null;
+  activity_id: string | null;
+  show_in_schedule: boolean | null;
   registration_deadline: string | null;
   max_participants: number | null;
   is_registration_open: boolean | null;
@@ -46,13 +56,17 @@ function toLocalDateTimeValue(value: string | null | undefined) {
 export function EventFormDialog({
   mode,
   sports,
+  activities,
   event,
   trigger,
+  triggerClassName,
 }: {
   mode: "create" | "edit";
-  sports: SportOption[];
+  sports?: SportOption[];
+  activities: ActivityOption[];
   event?: EventOption;
   trigger: ReactNode;
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(
@@ -78,6 +92,8 @@ export function EventFormDialog({
       current_round: event?.current_round ?? "",
       description: event?.description ?? "",
       sport_id: event?.sport_id ?? "",
+      activity_id: event?.activity_id ?? "",
+      show_in_schedule: String(event?.show_in_schedule ?? false),
       icon_key: event?.icon_key ?? "Trophy",
     }),
     [event]
@@ -94,7 +110,10 @@ export function EventFormDialog({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-lg border border-cyan-300/40 bg-cyan-400/10 px-3 py-2 text-sm text-cyan-100 transition hover:bg-cyan-400/20"
+        className={
+          triggerClassName ??
+          "inline-flex items-center gap-2 rounded-lg border border-cyan-300/40 bg-cyan-400/10 px-3 py-2 text-sm text-cyan-100 transition hover:bg-cyan-400/20"
+        }
       >
         {trigger}
       </button>
@@ -141,9 +160,19 @@ export function EventFormDialog({
                   <option value="ceremony">ceremony</option>
                   <option value="mini_game">mini_game</option>
                 </select>
+                <select name="activity_id" defaultValue={defaults.activity_id} className={fieldClass}>
+                  <option value="">Select linked activity</option>
+                  {activities
+                    .filter((activity) => activity.is_active !== false)
+                    .map((activity) => (
+                      <option key={activity.id} value={activity.id}>
+                        {activity.title} ({activity.category})
+                      </option>
+                    ))}
+                </select>
                 <select name="sport_id" defaultValue={defaults.sport_id} className={fieldClass}>
                   <option value="">No linked sport</option>
-                  {sports.map((sport) => (
+                  {(sports ?? []).map((sport) => (
                     <option key={sport.id} value={sport.id}>
                       {sport.name}
                     </option>
@@ -166,6 +195,10 @@ export function EventFormDialog({
                   <option value="public">public</option>
                   <option value="private">private</option>
                 </select>
+                <select name="show_in_schedule" defaultValue={defaults.show_in_schedule} className={fieldClass}>
+                  <option value="false">hide from schedule</option>
+                  <option value="true">show in schedule</option>
+                </select>
                 <select name="is_registration_open" defaultValue={defaults.is_registration_open} className={fieldClass}>
                   <option value="true">registration open</option>
                   <option value="false">registration closed</option>
@@ -174,6 +207,28 @@ export function EventFormDialog({
                   <option value="false">not featured</option>
                   <option value="true">featured</option>
                 </select>
+              </div>
+
+              <div className="rounded-lg border border-cyan-200/20 bg-[#0a1737]/70 p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100/75">Create Activity Inline (Optional)</p>
+                <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <input
+                    name="new_activity_title"
+                    placeholder="Activity title"
+                    className={fieldClass}
+                  />
+                  <input
+                    name="new_activity_slug"
+                    placeholder="activity-slug"
+                    className={fieldClass}
+                  />
+                  <select name="new_activity_category" defaultValue="" className={fieldClass}>
+                    <option value="">Category</option>
+                    <option value="collective_sport">collective_sport</option>
+                    <option value="individual_sport">individual_sport</option>
+                    <option value="culture">culture</option>
+                  </select>
+                </div>
               </div>
 
               <input name="current_round" defaultValue={defaults.current_round} placeholder="Current round (optional)" className={fieldClass} />

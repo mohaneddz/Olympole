@@ -52,7 +52,7 @@ export default async function RegisterPage() {
           Activity Registration Portal
         </h1>
         <p className="mx-auto mt-4 max-w-3xl text-foreground/70">
-          Choose one of the 12 activities below. Each activity has a dedicated registration form and your draft is
+          Choose one of the 10 activities below. Each activity has a dedicated registration form and your draft is
           saved in cookies automatically.
         </p>
       </section>

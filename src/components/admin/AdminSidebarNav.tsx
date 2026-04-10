@@ -3,17 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ClipboardList,
-  GitBranch,
+  Shield,
   LayoutDashboard,
-  FlagTriangleRight,
-  Palette,
   Radio,
   Settings,
-  Shield,
   Trophy,
   Users,
-  UsersRound,
+  Volleyball,
+  Dumbbell,
+  Palette,
 } from "lucide-react";
 
 const navGroups = [
@@ -21,25 +19,23 @@ const navGroups = [
     title: "Core",
     links: [
       { href: "/admin", label: "Overview", icon: LayoutDashboard },
-      { href: "/admin/events", label: "Event Management", icon: Trophy },
-      { href: "/admin/matches", label: "Matches", icon: FlagTriangleRight },
-      { href: "/admin/live", label: "Live Streams", icon: Radio },
+      { href: "/admin/schedule", label: "Schedule", icon: Trophy },
+      { href: "/admin/live-streams", label: "Live Streams", icon: Radio },
     ],
   },
   {
-    title: "Programs",
+    title: "Registrations",
     links: [
-      { href: "/admin/sports", label: "Sports", icon: Shield },
-      { href: "/admin/teams", label: "Teams", icon: UsersRound },
-      { href: "/admin/culture", label: "Culture", icon: Palette },
-      { href: "/admin/tournaments", label: "Tournaments", icon: GitBranch },
+      { href: "/admin/registrations/individual-sports", label: "Individual Sports", icon: Dumbbell },
+      { href: "/admin/registrations/collective-sports", label: "Collective Sports", icon: Volleyball },
+      { href: "/admin/registrations/culture-events", label: "Culture Events", icon: Palette },
     ],
   },
   {
     title: "Management",
     links: [
-      { href: "/admin/registrations", label: "Registrations", icon: ClipboardList },
-      { href: "/admin/users", label: "User Management", icon: Users },
+      { href: "/admin/teams", label: "Teams", icon: Shield },
+      { href: "/admin/users", label: "Users", icon: Users },
       { href: "/admin/settings", label: "Settings", icon: Settings },
     ],
   },
@@ -47,6 +43,7 @@ const navGroups = [
 
 export function AdminSidebarNav() {
   const pathname = usePathname();
+  const normalizedPathname = pathname !== "/" ? pathname.replace(/\/+$/, "") : pathname;
 
   return (
     <nav className="flex-1 overflow-y-auto p-4">
@@ -59,7 +56,10 @@ export function AdminSidebarNav() {
             <div className="mt-2 space-y-1">
               {group.links.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href;
+                const isRootOverview = item.href === "/admin";
+                const isActive = isRootOverview
+                  ? normalizedPathname === "/admin"
+                  : normalizedPathname === item.href || normalizedPathname.startsWith(`${item.href}/`);
 
                 return (
                   <Link

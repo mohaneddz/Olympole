@@ -325,7 +325,7 @@ export default async function LivePage() {
             <div className="mt-10 flex justify-center">
               <p className="w-full border-t border-white/10 pt-5 text-center text-sm text-white/55">
                 Admin shortcut{" "}
-                <Link href="/admin/live" className="font-semibold text-cyan-200 transition hover:text-cyan-100">
+                <Link href="/admin/live-streams" className="font-semibold text-cyan-200 transition hover:text-cyan-100">
                   Manage live streams
                 </Link>
               </p>

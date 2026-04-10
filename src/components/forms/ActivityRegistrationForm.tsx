@@ -45,7 +45,6 @@ type DefaultValues = {
   additional_notes: string;
   detail_gender: string;
   detail_competition_level: string;
-  detail_race_category: string;
   detail_elo_rating: string;
   detail_talent_type: string;
   detail_performance_description: string;
@@ -69,7 +68,6 @@ type FormState = {
   additional_notes: string;
   detail_gender: string;
   detail_competition_level: string;
-  detail_race_category: string;
   detail_elo_rating: string;
   detail_talent_type: string;
   detail_performance_description: string;
@@ -108,7 +106,6 @@ function buildInitialFormValues(defaults: DefaultValues, events: EventOption[]):
     additional_notes: defaults.additional_notes,
     detail_gender: defaults.detail_gender,
     detail_competition_level: defaults.detail_competition_level,
-    detail_race_category: defaults.detail_race_category,
     detail_elo_rating: defaults.detail_elo_rating,
     detail_talent_type: defaults.detail_talent_type,
     detail_performance_description: defaults.detail_performance_description,
@@ -157,7 +154,6 @@ export function ActivityRegistrationForm({
       additional_notes: formState.additional_notes,
       detail_gender: formState.detail_gender,
       detail_competition_level: formState.detail_competition_level,
-      detail_race_category: formState.detail_race_category,
       detail_elo_rating: formState.detail_elo_rating,
       detail_talent_type: formState.detail_talent_type,
       detail_performance_description: formState.detail_performance_description,
@@ -246,9 +242,6 @@ export function ActivityRegistrationForm({
       const preferredRoleError = requireValue(formState.preferred_role, "Preferred role");
       if (preferredRoleError) return preferredRoleError;
 
-      if (activity.slug === "swimming") {
-        return requireValue(formState.detail_race_category, "Race category");
-      }
       if (activity.slug === "talent-show") {
         return (
           requireValue(formState.detail_talent_type, "Type of talent / act")
@@ -516,29 +509,6 @@ export function ActivityRegistrationForm({
         ) : (
           <input type="hidden" name="team_name" value={formState.team_name} />
         )}
-
-        {activity.slug === "swimming" ? (
-          <label className={labelClassName}>
-            <span>Race category *</span>
-            <select
-              name="detail_race_category"
-              required
-              value={formState.detail_race_category}
-              onChange={(event) => {
-                updateField("detail_race_category", event.target.value);
-                markFieldTouched("detail_race_category");
-              }}
-              onBlur={() => markFieldTouched("detail_race_category")}
-              className={getFieldClass("detail_race_category", !formState.detail_race_category.trim())}
-              disabled={isFormDisabled}
-            >
-              <option value="">Select race category</option>
-              <option value="100m sprint">100m sprint</option>
-              <option value="10km">10km</option>
-              <option value="both">Both</option>
-            </select>
-          </label>
-        ) : null}
 
         {(activity.slug === "running" || activity.slug === "chess") ? (
           <label className={labelClassName}>

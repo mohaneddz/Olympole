@@ -70,9 +70,11 @@ export const eventSchema = z
     status: z.enum(["draft", "scheduled", "live", "completed", "cancelled"]),
     description: optionalText(1200),
     sport_id: uuid.optional().or(z.literal("")),
+    activity_id: uuid.optional().or(z.literal("")),
     registration_deadline: datetimeString.optional().or(z.literal("")),
     max_participants: z.coerce.number().int().positive().optional(),
     is_registration_open: z.boolean().optional(),
+    show_in_schedule: z.boolean().optional(),
     is_featured: z.boolean().optional(),
     visibility: z.enum(["public", "private"]).optional(),
     current_round: optionalText(120),
@@ -175,9 +177,10 @@ export const sportSchema = z.object({
 export const teamSchema = z.object({
   sport_id: uuid,
   name: requiredText(2, 120, "Team name"),
-  short_code: optionalText(10),
-  city: optionalText(120),
-  coach_name: optionalText(120),
+  category: z.preprocess(
+    trimInput,
+    z.enum(["collective", "individual", "culture"])
+  ),
 });
 
 export const teamMembershipSchema = z.object({
@@ -207,6 +210,12 @@ export const profileAdminUpdateSchema = z.object({
   full_name: requiredText(2, 120, "Full name"),
   school: optionalText(120),
   year_of_study: optionalText(20),
+  student_id: z.preprocess(
+    trimInput,
+    z.string().regex(/^\d{12}$/, "Student ID must be exactly 12 digits.")
+  )
+    .optional()
+    .or(z.literal("")),
   phone: optionalPhone,
   username: z.preprocess(
     trimInput,

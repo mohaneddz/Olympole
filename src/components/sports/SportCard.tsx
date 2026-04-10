@@ -6,6 +6,7 @@ import { SportItem } from "@/data/sports";
 
 export default function SportCard({ sport, index }: { sport: SportItem; index: number }) {
   const isEven = index % 2 === 0;
+  const cardImageSizes = "(max-width: 768px) 18rem, (max-width: 1024px) 20rem, 24rem";
 
   return (
     <article
@@ -46,6 +47,7 @@ export default function SportCard({ sport, index }: { sport: SportItem; index: n
             src="/svgs/artifacts/activity-holder.svg"
             alt=""
             fill
+            sizes={cardImageSizes}
             className="w-full h-full"
             aria-hidden
           />
@@ -57,6 +59,7 @@ export default function SportCard({ sport, index }: { sport: SportItem; index: n
             src={sport.image}
             alt={sport.name}
             fill
+            sizes={cardImageSizes}
             className="object-cover"
           />
           {/* Sport-specific gradient overlay */}
