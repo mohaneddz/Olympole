@@ -23,7 +23,6 @@ export type RegistrationDraftCookie = {
   additional_notes?: string;
   detail_gender?: string;
   detail_competition_level?: string;
-  detail_race_category?: string;
   detail_elo_rating?: string;
   detail_talent_type?: string;
   detail_performance_description?: string;
