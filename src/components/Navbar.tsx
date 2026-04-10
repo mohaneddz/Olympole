@@ -52,7 +52,7 @@ export async function Navbar() {
           ) : (
             <Link
               href="/login"
-              className="text-sm font-semibold tracking-[0.08em] text-cyan-50/90 transition-colors hover:text-white lg:text-base"
+              className="inline-flex h-10 items-center justify-center rounded-full border border-cyan-300/55 bg-transparent px-5 text-sm font-semibold tracking-[0.08em] text-cyan-50/90 transition-colors hover:bg-cyan-300/10 hover:text-white lg:text-base"
             >
               Sign in
             </Link>
@@ -89,7 +89,7 @@ export async function Navbar() {
               ) : (
                 <Link
                   href="/login"
-                  className="block rounded-xl px-4 py-3 text-center text-base font-semibold tracking-[0.08em] text-cyan-50/90 transition-colors hover:bg-cyan-300/10 hover:text-white"
+                  className="block rounded-xl border border-cyan-300/55 bg-transparent px-4 py-3 text-center text-base font-semibold tracking-[0.08em] text-cyan-50/90 transition-colors hover:bg-cyan-300/10 hover:text-white"
                 >
                   Sign in
                 </Link>

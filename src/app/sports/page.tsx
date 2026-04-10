@@ -1,12 +1,17 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import { SPORTS } from "@/data/sports";
 import { SHARED_DECORATIVE_ELEMENTS } from "@/data/decoration";
 import SportCard from "@/components/sports/SportCard";
 
 export default function SportsPage() {
-  const collectiveSports = SPORTS.filter((sport) => sport.category === "collective");
+  const [activeCategory, setActiveCategory] = useState<"collective" | "individual">("collective");
+  const visibleSports = useMemo(
+    () => SPORTS.filter((sport) => sport.category === activeCategory),
+    [activeCategory]
+  );
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
@@ -52,7 +57,7 @@ export default function SportsPage() {
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-20 pt-16 flex flex-col gap-20">
+      <section className="relative z-10 w-full bg-background pt-16 mt-4 pb-20">
         {SHARED_DECORATIVE_ELEMENTS.map((el, i: number) => (
           <Image
             key={i}
@@ -65,10 +70,29 @@ export default function SportsPage() {
           />
         ))}
 
+        <div className="z-10 mx-auto w-full max-w-7xl px-4 flex flex-col gap-20">
+          <div className="mx-auto w-full max-w-4xl rounded-2xl border border-cyan-300/65 bg-[#202f68] p-1.5 grid grid-cols-2 my-4">
+          <button
+            type="button"
+            onClick={() => setActiveCategory("collective")}
+            className={`rounded-xl py-3 text-lg font-bold transition ${activeCategory === "collective" ? "bg-[#84d4e8] text-[#061a2d]" : "text-white"}`}
+          >
+            Collective
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveCategory("individual")}
+            className={`rounded-xl py-3 text-lg font-bold transition ${activeCategory === "individual" ? "bg-[#84d4e8] text-[#061a2d]" : "text-white"}`}
+          >
+            Individual
+          </button>
+        </div>
+
         <div className="flex flex-col gap-20">
-          {collectiveSports.map((sport, idx) => (
+          {visibleSports.map((sport, idx) => (
             <SportCard key={sport.name} sport={sport} index={idx} />
           ))}
+        </div>
         </div>
       </section>
     </div>
