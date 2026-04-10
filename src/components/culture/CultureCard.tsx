@@ -6,6 +6,7 @@ import { CultureEvent } from "@/data/culture";
 
 export function CultureCard({ event, index }: { event: CultureEvent; index: number }) {
   const isEven = index % 2 === 0;
+  const cardImageSizes = "(max-width: 768px) 18rem, (max-width: 1024px) 20rem, 24rem";
 
   return (
     <article
@@ -50,6 +51,7 @@ export function CultureCard({ event, index }: { event: CultureEvent; index: numb
             src="/svgs/artifacts/activity-holder.svg"
             alt=""
             fill
+            sizes={cardImageSizes}
             className="w-full h-full"
             aria-hidden
           />
@@ -61,6 +63,7 @@ export function CultureCard({ event, index }: { event: CultureEvent; index: numb
             src={event.image}
             alt={event.name}
             fill
+            sizes={cardImageSizes}
             className="object-cover transition-transform duration-700 group-hover:scale-105"
           />
           {/* Event-specific gradient overlay */}
