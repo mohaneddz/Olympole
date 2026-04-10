@@ -1,7 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { getCurrentProfile } from "@/lib/auth";
+import { SHARED_DECORATIVE_ELEMENTS } from "@/data/decoration";
 import { getAppSettings, getPublicLiveStreams } from "@/lib/queries";
+
+type StreamEvent = {
+  title?: string | null;
+  slug?: string | null;
+  starts_at?: string | null;
+} | null;
 
 function getEmbeddableUrl(url: string) {
   const value = url.trim();
@@ -20,13 +27,64 @@ function getEmbeddableUrl(url: string) {
 
     if (parsed.hostname.includes("youtube.com")) {
       const id = parsed.searchParams.get("v");
-      return id ? `https://www.youtube.com/embed/${id}` : null;
+      if (id) {
+        return `https://www.youtube.com/embed/${id}`;
+      }
+
+      const shortsId = parsed.pathname.startsWith("/shorts/")
+        ? parsed.pathname.replace("/shorts/", "")
+        : null;
+      if (shortsId) {
+        return `https://www.youtube.com/embed/${shortsId}`;
+      }
+    }
+
+    if (parsed.hostname.includes("vimeo.com")) {
+      const id = parsed.pathname.split("/").filter(Boolean)[0];
+      return id ? `https://player.vimeo.com/video/${id}` : null;
     }
   } catch {
     return null;
   }
 
   return null;
+}
+
+function resolveEvent(eventRelation: unknown): StreamEvent {
+  if (!eventRelation) {
+    return null;
+  }
+
+  const first = Array.isArray(eventRelation) ? eventRelation[0] : eventRelation;
+  if (!first || typeof first !== "object") {
+    return null;
+  }
+
+  const event = first as { title?: string; slug?: string; starts_at?: string };
+  return {
+    title: event.title,
+    slug: event.slug,
+    starts_at: event.starts_at,
+  };
+}
+
+function formatStreamDate(value?: string | null) {
+  if (!value) {
+    return "TBD";
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "TBD";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(parsed);
 }
 
 export default async function LivePage() {
@@ -40,267 +98,241 @@ export default async function LivePage() {
   const previousStreams = streams.filter((stream) => stream.status === "ended");
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#030b2b]">
-      {/* Background Artifacts */}
-      <Image
-        src="/svgs/artifacts/yellow-zigzag.svg"
-        alt=""
-        width={400}
-        height={400}
-        aria-hidden
-        className="pointer-events-none absolute -right-[6%] top-[10%] h-auto w-50 opacity-100 md:w-90"
-      />
-      <Image
-        src="/svgs/artifacts/small-circles.svg"
-        alt=""
-        width={400}
-        height={400}
-        aria-hidden
-        className="pointer-events-none absolute left-[12%] top-[10%] h-auto w-20 opacity-100 md:w-70"
-      />
-      <Image
-        src="/svgs/artifacts/big-circles.svg"
-        alt=""
-        width={400}
-        height={400}
-        aria-hidden
-        className="pointer-events-none absolute -left-[6%] bottom-[30%] h-auto w-20 opacity-100 md:w-70"
-      />
-      <Image
-        src="/svgs/artifacts/yellow-zigzag.svg"
-        alt=""
-        width={400}
-        height={400}
-        aria-hidden
-        className="pointer-events-none absolute -left-[6%] bottom-[10%] h-auto w-50 opacity-100 md:w-90"
-      />
-
-      <div className="container relative z-10 mx-auto max-w-7xl px-4 py-16 space-y-12">
-        <div className="mx-auto max-w-4xl text-center space-y-6">
-          <h1 className="text-4xl font-bold tracking-tight text-white md:text-6xl">
-            Live{" "}
-            <span className="relative inline-block text-[#9fe8ff]">
-              Streams
-              <span className="absolute -bottom-2 left-1/2 h-1.5 w-full -translate-x-1/2 rounded-full bg-[#86deff]" />
-            </span>
-          </h1>
-          <p className="mx-auto max-w-2xl text-xl text-white/90 md:text-2xl">
-            Watch live event feeds and official broadcasts managed by organizers.
-          </p>
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
+      <section className="relative flex min-h-[60vh] flex-col items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/images/backgrounds/hero.avif"
+            alt=""
+            fill
+            priority
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,rgba(5,5,15,0.4)_80%,rgba(5,5,15,0.5)_100%)] z-0" />
+          <div className="absolute inset-0 bg-background/10 backdrop-blur-[1px]" />
+          <div
+            className="absolute inset-0 opacity-[0.03]"
+            style={{ backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "40px 40px" }}
+          />
         </div>
 
-        {!settings.live_streaming_enabled ? (
-          <div className="rounded-2xl border border-yellow-500/40 bg-yellow-500/10 p-8 text-center text-yellow-100 shadow-[0_0_22px_rgba(234,179,8,0.2)]">
-            <p className="text-xl font-medium">Live streaming is currently disabled by administrators.</p>
-          </div>
-        ) : streams.length === 0 ? (
-          <div className="rounded-2xl border border-[#72dfff]/30 bg-[#1b2a62]/40 p-12 text-center text-white/70 shadow-[0_0_22px_rgba(0,224,255,0.1)]">
-            <p className="text-xl">No live streams are available right now.</p>
-          </div>
-        ) : (
-          <div className="space-y-20">
-            {/* LIVE NOW */}
-            {liveStreams.length > 0 && (
-              <div className="space-y-8">
-                <h2 className="text-3xl font-bold text-white border-b border-[#72dfff]/20 pb-4 flex items-center gap-3">
-                  <span className="relative flex h-4 w-4">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
-                  </span>
-                  Live Now
-                </h2>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {liveStreams.map((stream) => {
-                    const eventRelation = stream.events as { title?: string; slug?: string; starts_at?: string } | Array<{ title?: string; slug?: string; starts_at?: string }> | null;
-                    const event = Array.isArray(eventRelation) ? eventRelation[0] : eventRelation;
-                    const embedUrl = stream.playback_url ? getEmbeddableUrl(stream.playback_url) : null;
-                    return (
-                      <article 
-                        key={stream.id} 
-                        className="rounded-2xl border border-[#72dfff] bg-[#1b2a62] p-6 space-y-4 shadow-[0_0_0_1px_rgba(114,223,255,0.5),0_0_30px_rgba(0,224,255,0.4)] relative overflow-hidden"
-                      >
-                        <div className="flex items-start justify-between gap-4 relative z-10">
-                          <div className="space-y-1">
-                            <h3 className="text-2xl font-bold text-white tracking-tight">{stream.title}</h3>
-                            <p className="text-white/80 text-lg leading-relaxed">{stream.description ?? "No description."}</p>
-                          </div>
-                          <span className="shrink-0 rounded-full border border-red-500/50 bg-red-500/20 px-4 py-1 text-xs font-bold uppercase tracking-wider text-red-400 animate-pulse">
-                            LIVE
-                          </span>
-                        </div>
-                        
-                        {event ? (
-                          <div className="flex items-center gap-2 text-sm text-[#9fe8ff] relative z-10">
-                            <span className="font-semibold px-2 py-0.5 rounded bg-[#9fe8ff]/10">EVENT</span>
-                            <span className="font-medium">{event.title}</span>
-                          </div>
-                        ) : null}
+        <div className="container relative z-10 mx-auto flex flex-col items-center justify-center gap-4 px-4 text-center">
+          <Image
+            src="/images/brand/fire.png"
+            alt=""
+            width={292}
+            height={362}
+            aria-hidden
+            className="mb-2 h-auto w-32 md:w-40 animate-fade-in-up"
+          />
+          <Image
+            src="/images/brand/circles.png"
+            alt=""
+            width={243}
+            height={134}
+            aria-hidden
+            className="mb-6 h-auto w-16 md:w-20 animate-fade-in-up"
+          />
+          <h1 className="font-heading text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-2">
+            <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60">
+              LIVE STREAMS
+            </span>
+          </h1>
+          <p className="mx-auto max-w-2xl text-base text-white/85 md:text-xl">
+            Watch active broadcasts first, then browse ended streams in compact replay cards.
+          </p>
+        </div>
+      </section>
 
-                        {stream.playback_url ? (
-                          <div className="mt-4 relative z-10">
-                            {embedUrl ? (
-                              <iframe
-                                src={embedUrl}
-                                title={stream.title}
-                                className="w-full aspect-video rounded-xl border border-[#72dfff]/50 shadow-[0_0_15px_rgba(114,223,255,0.3)]"
-                                allow="autoplay; encrypted-media; picture-in-picture"
-                                allowFullScreen
-                              />
-                            ) : (
-                              <div className="space-y-3">
-                                <video controls className="w-full aspect-video rounded-xl border border-[#72dfff]/50 shadow-[0_0_15px_rgba(114,223,255,0.3)]">
-                                  <source src={stream.playback_url} />
-                                </video>
-                                <Link
-                                  href={stream.playback_url}
-                                  target="_blank"
-                                  className="inline-flex items-center gap-2 text-sm text-primary font-bold uppercase tracking-wide hover:opacity-80 transition-opacity"
+      <section id="live-streams" className="relative z-10 w-full bg-background pt-16 mt-4 pb-20">
+        {SHARED_DECORATIVE_ELEMENTS.map((el, i) => (
+          <Image
+            key={i}
+            src={el.src}
+            alt=""
+            width={120}
+            height={120}
+            aria-hidden
+            className={`pointer-events-none ${el.className}`}
+          />
+        ))}
+
+        <div className="z-10 mx-auto w-full max-w-7xl px-4">
+          {!settings.live_streaming_enabled ? (
+            <div className="rounded-2xl border border-yellow-300/45 bg-yellow-500/10 p-8 text-center text-yellow-100">
+              <p className="text-lg font-semibold">Live streaming is currently disabled by administrators.</p>
+            </div>
+          ) : streams.length === 0 ? (
+            <div className="rounded-2xl border border-cyan-300/45 bg-[#1c2f67]/50 p-10 text-center text-white/70">
+              <p className="text-lg">No streams are available right now.</p>
+            </div>
+          ) : (
+            <div className="space-y-14">
+              {liveStreams.length > 0 && (
+                <section className="space-y-6">
+                  <div className="flex items-center gap-3 border-b border-cyan-300/35 pb-4">
+                    <span className="relative flex h-3.5 w-3.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-70" />
+                      <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-red-500" />
+                    </span>
+                    <h2 className="font-heading text-3xl font-black tracking-tight text-white">Live Now</h2>
+                  </div>
+                  <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
+                    {liveStreams.map((stream) => {
+                      const event = resolveEvent(stream.events);
+                      const embedUrl = stream.playback_url ? getEmbeddableUrl(stream.playback_url) : null;
+
+                      return (
+                        <article
+                          key={stream.id}
+                          className="rounded-3xl border border-cyan-300/60 bg-[#1c2f67]/95 p-6 shadow-[0_0_0_1px_rgba(114,223,255,0.35),0_10px_40px_rgba(0,0,0,0.35)] md:p-7"
+                        >
+                          <div className="mb-5 flex items-start justify-between gap-4">
+                            <div className="space-y-2">
+                              <h3 className="text-2xl font-black tracking-tight text-white">{stream.title}</h3>
+                              <p className="text-sm leading-relaxed text-white/75 md:text-base">
+                                {stream.description ?? "Live coverage in progress."}
+                              </p>
+                            </div>
+                            <span className="shrink-0 rounded-full border border-red-400/60 bg-red-500/20 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-red-300">
+                              Live
+                            </span>
+                          </div>
+
+                          {event?.title ? (
+                            <p className="mb-4 text-sm text-cyan-200">
+                              {event.title}
+                              {event.starts_at ? ` - ${formatStreamDate(event.starts_at)}` : ""}
+                            </p>
+                          ) : null}
+
+                          {stream.playback_url ? (
+                            <>
+                              {embedUrl ? (
+                                <iframe
+                                  src={embedUrl}
+                                  title={stream.title}
+                                  className="w-full aspect-video rounded-2xl border border-cyan-300/35 bg-black/30"
+                                  allow="autoplay; encrypted-media; picture-in-picture"
+                                  allowFullScreen
+                                />
+                              ) : (
+                                <video
+                                  controls
+                                  className="w-full aspect-video rounded-2xl border border-cyan-300/35 bg-black/30"
                                 >
-                                  Open stream in new tab
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                  </svg>
-                                </Link>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center relative z-10">
-                            <p className="text-white/60 italic font-medium">Stream will begin shortly.</p>
-                          </div>
-                        )}
-                        {/* Internal Neon Glow */}
-                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#72dfff] to-transparent opacity-70"></div>
-                      </article>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* UPCOMING STREAMS */}
-            {upcomingStreams.length > 0 && (
-              <div className="space-y-8">
-                <h2 className="text-3xl font-bold text-white border-b border-white/10 pb-4 text-white/90">Upcoming Streams</h2>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {upcomingStreams.map((stream) => {
-                    const eventRelation = stream.events as { title?: string; slug?: string; starts_at?: string } | Array<{ title?: string; slug?: string; starts_at?: string }> | null;
-                    const event = Array.isArray(eventRelation) ? eventRelation[0] : eventRelation;
-                    return (
-                      <article 
-                        key={stream.id} 
-                        className="rounded-2xl border border-[#72dfff]/40 bg-[#1b2a62]/80 p-6 space-y-4 opacity-90 transition-opacity hover:opacity-100 hover:border-[#72dfff]/80"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="space-y-1">
-                            <h3 className="text-2xl font-bold text-white tracking-tight">{stream.title}</h3>
-                            <p className="text-white/60 text-lg leading-relaxed">{stream.description ?? "No description."}</p>
-                          </div>
-                          <span className="shrink-0 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-4 py-1 text-xs font-bold uppercase tracking-wider text-yellow-400">
-                            UPCOMING
-                          </span>
-                        </div>
-                        
-                        {event ? (
-                          <div className="flex items-center gap-2 text-sm text-[#9fe8ff]/80">
-                            <span className="font-semibold px-2 py-0.5 rounded bg-[#9fe8ff]/10">EVENT</span>
-                            <span className="font-medium">{event.title}</span>
-                            <span className="text-white/30">•</span>
-                            <span>{event.starts_at ? new Date(event.starts_at).toLocaleString() : "TBD"}</span>
-                          </div>
-                        ) : null}
-
-                        {stream.playback_url ? (
-                          <div className="mt-4 rounded-xl border border-white/10 bg-[#030b2b]/50 p-6 flex flex-col items-center justify-center gap-3">
-                            <svg className="w-8 h-8 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                            <p className="text-white/50 text-sm font-medium">Link acquired. Stream will appear here.</p>
-                          </div>
-                        ) : (
-                          <div className="mt-4 rounded-xl border border-dashed border-white/10 bg-transparent p-6 text-center">
-                            <p className="text-white/40 italic font-medium">Waiting for broadcast link...</p>
-                          </div>
-                        )}
-                      </article>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* PREVIOUS STREAMS */}
-            {previousStreams.length > 0 && (
-              <div className="space-y-8">
-                <h2 className="text-3xl font-bold text-white/60 border-b border-white/5 pb-4">Previous Streams</h2>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {previousStreams.map((stream) => {
-                    const eventRelation = stream.events as { title?: string; slug?: string; starts_at?: string } | Array<{ title?: string; slug?: string; starts_at?: string }> | null;
-                    const event = Array.isArray(eventRelation) ? eventRelation[0] : eventRelation;
-                    const embedUrl = stream.playback_url ? getEmbeddableUrl(stream.playback_url) : null;
-                    return (
-                      <article 
-                        key={stream.id} 
-                        className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-4 grayscale-[0.2] opacity-80 hover:grayscale-0 hover:opacity-100 transition-all duration-300"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="space-y-1">
-                            <h3 className="text-xl font-bold text-white/80 tracking-tight">{stream.title}</h3>
-                            <p className="text-white/50 text-base leading-relaxed line-clamp-2">{stream.description ?? "No description."}</p>
-                          </div>
-                          <span className="shrink-0 rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white/50">
-                            ENDED
-                          </span>
-                        </div>
-                        
-                        {event ? (
-                          <div className="flex items-center gap-2 text-sm text-white/40">
-                            <span className="font-semibold px-2 py-0.5 rounded bg-white/5 text-xs">EVENT</span>
-                            <span className="font-medium">{event.title}</span>
-                          </div>
-                        ) : null}
-
-                        {stream.playback_url ? (
-                          <div className="mt-4">
-                            {embedUrl ? (
-                              <iframe
-                                src={embedUrl}
-                                title={stream.title}
-                                className="w-full aspect-video rounded-xl border border-white/10 opacity-70 hover:opacity-100 transition-opacity"
-                                allow="autoplay; encrypted-media; picture-in-picture"
-                                allowFullScreen
-                              />
-                            ) : (
-                              <div className="space-y-3">
-                                <video controls className="w-full aspect-video rounded-xl border border-white/10 opacity-70 hover:opacity-100 transition-opacity">
                                   <source src={stream.playback_url} />
                                 </video>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="mt-4 rounded-xl border border-white/5 bg-transparent p-4 text-center">
-                            <p className="text-white/30 text-sm italic">Recording unavailable.</p>
-                          </div>
-                        )}
-                      </article>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+                              )}
+                              <Link
+                                href={stream.playback_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-4 inline-flex rounded-lg border border-cyan-300/50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-cyan-100 transition hover:bg-cyan-300/10"
+                              >
+                                Open stream link
+                              </Link>
+                            </>
+                          ) : (
+                            <div className="rounded-2xl border border-dashed border-white/20 bg-black/20 p-10 text-center text-sm text-white/60">
+                              Stream link will appear here shortly.
+                            </div>
+                          )}
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
 
-        {profile?.role === "admin" ? (
-          <div className="flex justify-center pt-8">
-            <p className="text-sm text-white/50 border-t border-white/10 pt-4 w-full text-center">
-              Admin shortcut:{" "}
-              <Link href="/admin/live" className="text-primary font-bold hover:underline transition-all">
-                MANAGE LIVE STREAMS
-              </Link>
-            </p>
-          </div>
-        ) : null}
-      </div>
+              {upcomingStreams.length > 0 && (
+                <section className="space-y-5">
+                  <h2 className="font-heading text-2xl font-black tracking-tight text-white/90">Upcoming Streams</h2>
+                  <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                    {upcomingStreams.map((stream) => {
+                      const event = resolveEvent(stream.events);
+
+                      return (
+                        <article key={stream.id} className="rounded-2xl border border-cyan-300/35 bg-[#1a2b5f]/80 p-5">
+                          <div className="mb-3 flex items-center justify-between gap-3">
+                            <h3 className="text-xl font-bold text-white">{stream.title}</h3>
+                            <span className="rounded-full border border-amber-300/50 bg-amber-500/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-200">
+                              Upcoming
+                            </span>
+                          </div>
+                          <p className="text-sm text-white/70">{stream.description ?? "Waiting for stream start."}</p>
+                          <p className="mt-3 text-xs text-cyan-100/90">
+                            {event?.title ? `${event.title} - ` : ""}
+                            {formatStreamDate(stream.starts_at || event?.starts_at)}
+                          </p>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {previousStreams.length > 0 && (
+                <section className="space-y-5">
+                  <h2 className="font-heading text-2xl font-black tracking-tight text-white/80">Ended Streams</h2>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                    {previousStreams.map((stream) => {
+                      const event = resolveEvent(stream.events);
+
+                      return (
+                        <article
+                          key={stream.id}
+                          className="rounded-xl border border-white/15 bg-white/[0.04] p-4 transition-colors hover:border-cyan-300/35 hover:bg-white/[0.06]"
+                        >
+                          <div className="mb-3 flex items-start justify-between gap-3">
+                            <h3 className="line-clamp-2 text-base font-semibold text-white/90">{stream.title}</h3>
+                            <span className="shrink-0 rounded-full border border-white/25 px-2 py-0.5 text-[10px] uppercase tracking-wider text-white/60">
+                              Ended
+                            </span>
+                          </div>
+
+                          <p className="line-clamp-2 text-xs leading-relaxed text-white/60">
+                            {stream.description ?? "No replay description."}
+                          </p>
+
+                          <div className="mt-3 space-y-1 text-[11px] text-white/55">
+                            {event?.title ? <p className="line-clamp-1">{event.title}</p> : null}
+                            <p>{formatStreamDate(stream.ends_at || stream.starts_at || event?.starts_at)}</p>
+                          </div>
+
+                          {stream.playback_url ? (
+                            <Link
+                              href={stream.playback_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-4 inline-flex rounded-md border border-cyan-300/45 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-cyan-100 transition hover:bg-cyan-300/10"
+                            >
+                              Watch replay
+                            </Link>
+                          ) : (
+                            <p className="mt-4 text-[11px] text-white/40">Replay unavailable</p>
+                          )}
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+            </div>
+          )}
+
+          {profile?.role === "admin" ? (
+            <div className="mt-10 flex justify-center">
+              <p className="w-full border-t border-white/10 pt-5 text-center text-sm text-white/55">
+                Admin shortcut{" "}
+                <Link href="/admin/live" className="font-semibold text-cyan-200 transition hover:text-cyan-100">
+                  Manage live streams
+                </Link>
+              </p>
+            </div>
+          ) : null}
+        </div>
+      </section>
     </div>
   );
 }
