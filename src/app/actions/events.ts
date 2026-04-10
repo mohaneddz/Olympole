@@ -35,6 +35,56 @@ function toIsoString(value: string) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+function normalizeActivitySlug(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+async function resolveActivityForEvent(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  formData: FormData,
+  fallbackActivityId?: string | null
+) {
+  const selectedActivityId = String(formData.get("activity_id") ?? "").trim() || fallbackActivityId || "";
+  const newActivityTitle = String(formData.get("new_activity_title") ?? "").trim();
+  const newActivitySlug = normalizeActivitySlug(String(formData.get("new_activity_slug") ?? ""));
+  const newActivityCategory = String(formData.get("new_activity_category") ?? "").trim();
+
+  let activityId = selectedActivityId;
+  if (!activityId && newActivityTitle && newActivitySlug && ["collective_sport", "individual_sport", "culture"].includes(newActivityCategory)) {
+    const { data: createdActivity } = await supabase
+      .from("activities")
+      .upsert(
+        {
+          title: newActivityTitle,
+          slug: newActivitySlug,
+          category: newActivityCategory,
+          is_active: true,
+        },
+        { onConflict: "slug" }
+      )
+      .select("id")
+      .single();
+
+    activityId = createdActivity?.id ?? "";
+  }
+
+  if (!activityId) {
+    return null;
+  }
+
+  const { data: activity } = await supabase
+    .from("activities")
+    .select("id, slug, title, category")
+    .eq("id", activityId)
+    .single();
+
+  return activity ?? null;
+}
+
 async function logAdmin(
   action: string,
   entityType: string,
@@ -70,9 +120,11 @@ export async function createEventAction(_: ActionResponse, formData: FormData): 
     status: formData.get("status"),
     description: formData.get("description"),
     sport_id: formData.get("sport_id"),
+    activity_id: formData.get("activity_id"),
     registration_deadline: formData.get("registration_deadline"),
     max_participants: toOptionalNumber(formData.get("max_participants")),
     is_registration_open: toBoolean(formData.get("is_registration_open"), true),
+    show_in_schedule: toBoolean(formData.get("show_in_schedule"), false),
     is_featured: toBoolean(formData.get("is_featured"), false),
     visibility: formData.get("visibility") || "public",
     current_round: formData.get("current_round"),
@@ -84,24 +136,30 @@ export async function createEventAction(_: ActionResponse, formData: FormData): 
   }
 
   const supabase = await createSupabaseServerClient();
+  const activity = await resolveActivityForEvent(supabase, formData, parsed.data.activity_id || null);
+  const eventType = activity ? (activity.category === "culture" ? "culture" : "sport") : parsed.data.type;
+  const eventCategory = activity?.title ?? parsed.data.category;
+
   const { data, error } = await supabase
     .from("events")
     .insert({
       title: parsed.data.title,
       slug: parsed.data.slug,
-      type: parsed.data.type,
-      category: parsed.data.category,
+      type: eventType,
+      category: eventCategory,
       venue: parsed.data.venue,
       starts_at: toIsoString(parsed.data.starts_at),
       ends_at: toIsoString(parsed.data.ends_at),
       status: parsed.data.status,
       description: parsed.data.description || null,
       sport_id: parsed.data.sport_id || null,
+      activity_id: (activity?.id ?? parsed.data.activity_id) || null,
       registration_deadline: parsed.data.registration_deadline
         ? toIsoString(parsed.data.registration_deadline)
         : null,
       max_participants: parsed.data.max_participants ?? null,
       is_registration_open: parsed.data.is_registration_open ?? true,
+      show_in_schedule: parsed.data.show_in_schedule ?? false,
       is_featured: parsed.data.is_featured ?? false,
       visibility: parsed.data.visibility ?? "public",
       current_round: parsed.data.current_round || null,
@@ -116,6 +174,7 @@ export async function createEventAction(_: ActionResponse, formData: FormData): 
 
   await logAdmin("event_create", "event", data?.id ?? null, { slug: parsed.data.slug });
   revalidatePath("/admin/events");
+  revalidatePath("/admin/schedule");
   revalidatePath("/admin/sports");
   revalidatePath("/schedule");
   revalidatePath("/sports");
@@ -141,9 +200,11 @@ export async function updateEventAction(_: ActionResponse, formData: FormData): 
     status: formData.get("status"),
     description: formData.get("description"),
     sport_id: formData.get("sport_id"),
+    activity_id: formData.get("activity_id"),
     registration_deadline: formData.get("registration_deadline"),
     max_participants: toOptionalNumber(formData.get("max_participants")),
     is_registration_open: toBoolean(formData.get("is_registration_open"), true),
+    show_in_schedule: toBoolean(formData.get("show_in_schedule"), false),
     is_featured: toBoolean(formData.get("is_featured"), false),
     visibility: formData.get("visibility") || "public",
     current_round: formData.get("current_round"),
@@ -155,24 +216,30 @@ export async function updateEventAction(_: ActionResponse, formData: FormData): 
   }
 
   const supabase = await createSupabaseServerClient();
+  const activity = await resolveActivityForEvent(supabase, formData, parsed.data.activity_id || null);
+  const eventType = activity ? (activity.category === "culture" ? "culture" : "sport") : parsed.data.type;
+  const eventCategory = activity?.title ?? parsed.data.category;
+
   const { error } = await supabase
     .from("events")
     .update({
       title: parsed.data.title,
       slug: parsed.data.slug,
-      type: parsed.data.type,
-      category: parsed.data.category,
+      type: eventType,
+      category: eventCategory,
       venue: parsed.data.venue,
       starts_at: toIsoString(parsed.data.starts_at),
       ends_at: toIsoString(parsed.data.ends_at),
       status: parsed.data.status,
       description: parsed.data.description || null,
       sport_id: parsed.data.sport_id || null,
+      activity_id: (activity?.id ?? parsed.data.activity_id) || null,
       registration_deadline: parsed.data.registration_deadline
         ? toIsoString(parsed.data.registration_deadline)
         : null,
       max_participants: parsed.data.max_participants ?? null,
       is_registration_open: parsed.data.is_registration_open ?? true,
+      show_in_schedule: parsed.data.show_in_schedule ?? false,
       is_featured: parsed.data.is_featured ?? false,
       visibility: parsed.data.visibility ?? "public",
       current_round: parsed.data.current_round || null,
@@ -186,6 +253,7 @@ export async function updateEventAction(_: ActionResponse, formData: FormData): 
 
   await logAdmin("event_update", "event", id, { slug: parsed.data.slug });
   revalidatePath("/admin/events");
+  revalidatePath("/admin/schedule");
   revalidatePath(`/admin/events/${id}/edit`);
   revalidatePath("/admin/sports");
   revalidatePath("/schedule");
@@ -561,9 +629,7 @@ export async function createTeamAction(formData: FormData): Promise<void> {
   const parsed = teamSchema.safeParse({
     sport_id: formData.get("sport_id"),
     name: formData.get("name"),
-    short_code: formData.get("short_code"),
-    city: formData.get("city"),
-    coach_name: formData.get("coach_name"),
+    category: formData.get("category") || "collective",
   });
 
   if (!parsed.success) {
@@ -577,9 +643,7 @@ export async function createTeamAction(formData: FormData): Promise<void> {
       {
         sport_id: parsed.data.sport_id,
         name: parsed.data.name,
-        short_code: parsed.data.short_code || null,
-        city: parsed.data.city || null,
-        coach_name: parsed.data.coach_name || null,
+        category: parsed.data.category,
       },
       { onConflict: "sport_id,name" }
     )
@@ -592,6 +656,44 @@ export async function createTeamAction(formData: FormData): Promise<void> {
 
   await logAdmin("team_upsert", "team", data?.id ?? null);
   revalidatePath("/admin/sports");
+  revalidatePath("/admin/teams");
+  revalidatePath("/sports");
+}
+
+export async function updateTeamAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) {
+    return;
+  }
+
+  const parsed = teamSchema.safeParse({
+    sport_id: formData.get("sport_id"),
+    name: formData.get("name"),
+    category: formData.get("category") || "collective",
+  });
+
+  if (!parsed.success) {
+    return;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("teams")
+    .update({
+      sport_id: parsed.data.sport_id,
+      name: parsed.data.name,
+      category: parsed.data.category,
+    })
+    .eq("id", id);
+
+  if (error) {
+    return;
+  }
+
+  await logAdmin("team_update", "team", id);
+  revalidatePath("/admin/sports");
+  revalidatePath("/admin/teams");
   revalidatePath("/sports");
 }
 
@@ -610,6 +712,7 @@ export async function deleteTeamAction(formData: FormData): Promise<void> {
 
   await logAdmin("team_delete", "team", id);
   revalidatePath("/admin/sports");
+  revalidatePath("/admin/teams");
   revalidatePath("/sports");
 }
 
@@ -652,10 +755,9 @@ export async function createLiveStreamAction(formData: FormData): Promise<void> 
   }
 
   await logAdmin("live_stream_create", "live_stream", data?.id ?? null);
-  revalidatePath("/admin/live");
-  revalidatePath("/admin/live/new");
+  revalidatePath("/admin/live-streams");
   revalidatePath("/live");
-  redirect("/admin/live");
+  redirect("/admin/live-streams");
 }
 
 export async function updateLiveStreamDetailsAction(formData: FormData): Promise<void> {
@@ -701,7 +803,7 @@ export async function updateLiveStreamDetailsAction(formData: FormData): Promise
   }
 
   await logAdmin("live_stream_update", "live_stream", id);
-  revalidatePath("/admin/live");
+  revalidatePath("/admin/live-streams");
   revalidatePath("/live");
 }
 
@@ -724,7 +826,7 @@ export async function updateLiveStreamStatusAction(formData: FormData): Promise<
   }
 
   await logAdmin(`live_stream_${status}`, "live_stream", id);
-  revalidatePath("/admin/live");
+  revalidatePath("/admin/live-streams");
   revalidatePath("/live");
 }
 
@@ -742,6 +844,6 @@ export async function deleteLiveStreamAction(formData: FormData): Promise<void> 
   }
 
   await logAdmin("live_stream_delete", "live_stream", id);
-  revalidatePath("/admin/live");
+  revalidatePath("/admin/live-streams");
   revalidatePath("/live");
 }

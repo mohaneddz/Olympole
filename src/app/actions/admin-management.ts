@@ -10,6 +10,7 @@ import {
   tournamentAssignmentSchema,
   tournamentSchema,
 } from "@/lib/validators";
+import { getAllowedActivityRegistrationTables } from "@/lib/activity-registry";
 
 function toOptionalIso(value: FormDataEntryValue | null) {
   const raw = String(value ?? "");
@@ -75,6 +76,7 @@ export async function updateUserProfileAdminAction(formData: FormData): Promise<
     full_name: formData.get("full_name"),
     school: formData.get("school"),
     year_of_study: formData.get("year_of_study"),
+    student_id: formData.get("student_id"),
     phone: formData.get("phone"),
     username: formData.get("username"),
     avatar_url: formData.get("avatar_url"),
@@ -92,6 +94,7 @@ export async function updateUserProfileAdminAction(formData: FormData): Promise<
       full_name: parsed.data.full_name,
       school: parsed.data.school || null,
       year_of_study: parsed.data.year_of_study || null,
+      student_id: parsed.data.student_id || null,
       phone: parsed.data.phone || null,
       username: parsed.data.username || null,
       avatar_url: parsed.data.avatar_url || null,
@@ -145,18 +148,22 @@ export async function deleteUserAdminAction(formData: FormData): Promise<void> {
 export async function deleteRegistrationAdminAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("registration_id") ?? "");
-  if (!id) {
+  const registrationTable = String(formData.get("registration_table") ?? "");
+  const allowedTables = new Set(getAllowedActivityRegistrationTables());
+  if (!id || !allowedTables.has(registrationTable)) {
     return;
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("registrations").delete().eq("id", id);
+  const { error } = await supabase.from(registrationTable).delete().eq("id", id);
   if (error) {
     return;
   }
 
   await logAdminAction("registration_delete", "registration", id);
-  revalidatePath("/admin/registrations");
+  revalidatePath("/admin/registrations/collective-sports");
+  revalidatePath("/admin/registrations/individual-sports");
+  revalidatePath("/admin/registrations/culture-events");
   revalidatePath("/profile");
 }
 
@@ -164,9 +171,11 @@ export async function assignRegistrationTeamAction(formData: FormData): Promise<
   await requireAdmin();
 
   const registrationId = String(formData.get("registration_id") ?? "");
+  const registrationTable = String(formData.get("registration_table") ?? "");
   const teamId = String(formData.get("team_id") ?? "");
   const membershipRole = String(formData.get("membership_role") ?? "player");
-  if (!registrationId) {
+  const allowedTables = new Set(getAllowedActivityRegistrationTables());
+  if (!registrationId || !allowedTables.has(registrationTable)) {
     return;
   }
 
@@ -178,7 +187,7 @@ export async function assignRegistrationTeamAction(formData: FormData): Promise<
   }
 
   const { data: registration, error } = await supabase
-    .from("registrations")
+    .from(registrationTable)
     .update({
       team_id: teamId || null,
       team_name: teamName,
@@ -203,11 +212,14 @@ export async function assignRegistrationTeamAction(formData: FormData): Promise<
   }
 
   await logAdminAction("registration_assign_team", "registration", registrationId, {
+    registration_table: registrationTable,
     team_id: teamId || null,
   });
 
-  revalidatePath("/admin/registrations");
-  revalidatePath("/admin/sports");
+  revalidatePath("/admin/registrations/collective-sports");
+  revalidatePath("/admin/registrations/individual-sports");
+  revalidatePath("/admin/registrations/culture-events");
+  revalidatePath("/admin/schedule");
   revalidatePath("/profile");
 }
 
@@ -255,8 +267,11 @@ export async function assignProfileToTeamAction(formData: FormData): Promise<voi
     team_id: parsed.data.team_id,
     profile_id: parsed.data.profile_id,
   });
-  revalidatePath("/admin/registrations");
-  revalidatePath("/admin/sports");
+  revalidatePath("/admin/registrations/collective-sports");
+  revalidatePath("/admin/registrations/individual-sports");
+  revalidatePath("/admin/registrations/culture-events");
+  revalidatePath("/admin/schedule");
+  revalidatePath("/admin/teams");
 }
 
 export async function removeTeamMembershipAction(formData: FormData): Promise<void> {
@@ -273,8 +288,72 @@ export async function removeTeamMembershipAction(formData: FormData): Promise<vo
   }
 
   await logAdminAction("team_membership_remove", "team_membership", id);
-  revalidatePath("/admin/sports");
-  revalidatePath("/admin/registrations");
+  revalidatePath("/admin/schedule");
+  revalidatePath("/admin/registrations/collective-sports");
+  revalidatePath("/admin/registrations/individual-sports");
+  revalidatePath("/admin/registrations/culture-events");
+  revalidatePath("/admin/teams");
+}
+
+export async function syncTeamMembersAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const teamId = String(formData.get("team_id") ?? "");
+  if (!teamId) {
+    return;
+  }
+
+  const requestedProfileIds = formData
+    .getAll("member_profile_id")
+    .map((entry) => String(entry).trim())
+    .filter((entry) => entry.length > 0);
+
+  const uniqueProfileIds = Array.from(new Set(requestedProfileIds));
+
+  const supabase = await createSupabaseServerClient();
+  const { data: existingMemberships, error: existingMembershipsError } = await supabase
+    .from("team_memberships")
+    .select("id, profile_id")
+    .eq("team_id", teamId);
+
+  if (existingMembershipsError) {
+    return;
+  }
+
+  const existingProfileIds = new Set((existingMemberships ?? []).map((membership) => membership.profile_id));
+  const requestedProfileIdSet = new Set(uniqueProfileIds);
+
+  const profileIdsToInsert = uniqueProfileIds.filter((profileId) => !existingProfileIds.has(profileId));
+  const membershipIdsToDelete = (existingMemberships ?? [])
+    .filter((membership) => !requestedProfileIdSet.has(membership.profile_id))
+    .map((membership) => membership.id);
+
+  if (profileIdsToInsert.length > 0) {
+    const insertRows = profileIdsToInsert.map((profileId) => ({
+      team_id: teamId,
+      profile_id: profileId,
+      role: "player",
+    }));
+    const { error: insertError } = await supabase.from("team_memberships").insert(insertRows);
+    if (insertError) {
+      return;
+    }
+  }
+
+  if (membershipIdsToDelete.length > 0) {
+    const { error: deleteError } = await supabase.from("team_memberships").delete().in("id", membershipIdsToDelete);
+    if (deleteError) {
+      return;
+    }
+  }
+
+  await logAdminAction("team_members_sync", "team", teamId, {
+    members_count: uniqueProfileIds.length,
+  });
+  revalidatePath("/admin/schedule");
+  revalidatePath("/admin/registrations/collective-sports");
+  revalidatePath("/admin/registrations/individual-sports");
+  revalidatePath("/admin/registrations/culture-events");
+  revalidatePath("/admin/teams");
 }
 
 export async function createTournamentAction(formData: FormData): Promise<void> {
@@ -314,7 +393,7 @@ export async function createTournamentAction(formData: FormData): Promise<void> 
   }
 
   await logAdminAction("tournament_create", "tournament", data?.id ?? null);
-  revalidatePath("/admin/sports");
+  revalidatePath("/admin/schedule");
 }
 
 export async function deleteTournamentAction(formData: FormData): Promise<void> {
@@ -331,7 +410,7 @@ export async function deleteTournamentAction(formData: FormData): Promise<void> 
   }
 
   await logAdminAction("tournament_delete", "tournament", id);
-  revalidatePath("/admin/sports");
+  revalidatePath("/admin/schedule");
 }
 
 export async function assignTeamToTournamentAction(formData: FormData): Promise<void> {
@@ -368,7 +447,7 @@ export async function assignTeamToTournamentAction(formData: FormData): Promise<
     seed,
     group_label: groupLabel,
   });
-  revalidatePath("/admin/sports");
+  revalidatePath("/admin/schedule");
 }
 
 export async function removeTournamentTeamAction(formData: FormData): Promise<void> {
@@ -385,7 +464,7 @@ export async function removeTournamentTeamAction(formData: FormData): Promise<vo
   }
 
   await logAdminAction("tournament_assignment_remove", "tournament_team", assignmentId);
-  revalidatePath("/admin/sports");
+  revalidatePath("/admin/schedule");
 }
 
 export async function clearTournamentDistributionAction(formData: FormData): Promise<void> {
@@ -398,7 +477,7 @@ export async function clearTournamentDistributionAction(formData: FormData): Pro
   const supabase = await createSupabaseServerClient();
   await supabase.from("tournament_teams").delete().eq("tournament_id", tournamentId);
   await logAdminAction("tournament_clear_distribution", "tournament", tournamentId);
-  revalidatePath("/admin/sports");
+  revalidatePath("/admin/schedule");
 }
 
 export async function randomDistributeTournamentTeamsAction(formData: FormData): Promise<void> {
@@ -444,5 +523,5 @@ export async function randomDistributeTournamentTeamsAction(formData: FormData):
   await logAdminAction("tournament_random_distribution", "tournament", tournamentId, {
     assigned_teams: rows.length,
   });
-  revalidatePath("/admin/sports");
+  revalidatePath("/admin/schedule");
 }

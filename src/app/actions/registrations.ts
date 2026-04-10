@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { failure, success, type ActionResponse } from "@/lib/actions";
+import { getAllowedActivityRegistrationTables, getManagedActivityBySlug } from "@/lib/activity-registry";
 import { getCurrentProfile, getCurrentUser, requireAdmin, requireAuth } from "@/lib/auth";
 import { getRegistrationDraftCookieName } from "@/lib/cookie-drafts";
 import { getAppSettings } from "@/lib/queries";
@@ -40,10 +41,6 @@ function validateActivitySpecificDetails(
     if (activitySlug === "football" && gender !== "men") {
       return "Football registrations are currently limited to men's category.";
     }
-  }
-
-  if (activitySlug === "swimming" && !details.race_category) {
-    return "Please choose a swimming race category.";
   }
 
   if (activitySlug === "talent-show") {
@@ -93,12 +90,23 @@ function parseActivityRegistrationPayload(formData: FormData) {
   return { parsed, details };
 }
 
+function getSafeRegistrationTableFromSlug(slug: string) {
+  const activity = getManagedActivityBySlug(slug);
+  return activity?.tableName ?? null;
+}
+
+function revalidateAdminRegistrationPages() {
+  revalidatePath("/admin/registrations/collective-sports");
+  revalidatePath("/admin/registrations/individual-sports");
+  revalidatePath("/admin/registrations/culture-events");
+}
+
 async function assertRegistrationLimit(userId: string, requestedEventCount: number) {
   const supabase = await createSupabaseServerClient();
   const settings = await getAppSettings();
 
   const { data: existingRegistrations } = await supabase
-    .from("registrations")
+    .from("v_activity_registrations_all")
     .select("id, event_id")
     .eq("user_id", userId);
 
@@ -214,7 +222,7 @@ export async function createRegistrationAction(_: ActionResponse, formData: Form
 
   revalidatePath("/register");
   revalidatePath("/profile");
-  revalidatePath("/admin/registrations");
+  revalidateAdminRegistrationPages();
   return success(`Registration submitted for ${newEventIds.length} event(s).`);
 }
 
@@ -245,6 +253,11 @@ export async function createActivityRegistrationAction(
     return failure(detailsValidationError);
   }
 
+  const registrationTable = getSafeRegistrationTableFromSlug(parsed.data.activity_slug);
+  if (!registrationTable) {
+    return failure("This activity is currently unavailable for registration.");
+  }
+
   const supabase = await createSupabaseServerClient();
   const limitState = await assertRegistrationLimit(user.id, 1);
   if (!limitState.ok) {
@@ -256,7 +269,7 @@ export async function createActivityRegistrationAction(
 
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("id, status, is_registration_open, max_participants, sports(slug)")
+    .select("id, status, is_registration_open, max_participants, activities(slug)")
     .eq("id", parsed.data.event_id)
     .single();
 
@@ -264,8 +277,8 @@ export async function createActivityRegistrationAction(
     return failure(eventError?.message ?? "Event is unavailable.");
   }
 
-  const linkedSport = Array.isArray(event.sports) ? event.sports[0] : event.sports;
-  if (linkedSport?.slug !== parsed.data.activity_slug) {
+  const linkedActivity = Array.isArray(event.activities) ? event.activities[0] : event.activities;
+  if (linkedActivity?.slug !== parsed.data.activity_slug) {
     return failure("The selected event does not match the requested activity.");
   }
 
@@ -275,7 +288,7 @@ export async function createActivityRegistrationAction(
 
   if (event.max_participants) {
     const { count } = await supabase
-      .from("registrations")
+      .from("v_activity_registrations_all")
       .select("id", { count: "exact", head: true })
       .eq("event_id", event.id);
 
@@ -284,27 +297,46 @@ export async function createActivityRegistrationAction(
     }
   }
 
-  const { error } = await supabase.from("registrations").insert({
+  const basePayload = {
     user_id: user.id,
     profile_id: user.id,
     full_name: parsed.data.full_name,
     email: parsed.data.email,
     phone: parsed.data.phone,
     department_or_school: parsed.data.department_or_school,
-    category_type: parsed.data.category_type,
     event_id: parsed.data.event_id,
     team_name: parsed.data.team_name || null,
     additional_notes: parsed.data.additional_notes || null,
     emergency_contact: parsed.data.emergency_contact || null,
-    activity_slug: parsed.data.activity_slug,
     previous_experience: parsed.data.previous_experience,
     motivation: parsed.data.motivation,
-    availability_date: parsed.data.availability_date || null,
     preferred_role: parsed.data.preferred_role || null,
-    registration_details: parsed.data.registration_details ?? details,
     status: "pending",
     attendance_status: "pending",
-  });
+  };
+
+  const typedDetails: Record<string, string | null> = {};
+  if (registrationTable.includes("football") || registrationTable.includes("basketball") || registrationTable.includes("handball") || registrationTable.includes("volleyball")) {
+    typedDetails.detail_gender = (parsed.data.registration_details?.gender ?? details.gender ?? "").trim() || null;
+  }
+  if (registrationTable.includes("chess")) {
+    typedDetails.detail_competition_level = (parsed.data.registration_details?.competition_level ?? details.competition_level ?? "").trim() || null;
+    typedDetails.detail_elo_rating = (parsed.data.registration_details?.elo_rating ?? details.elo_rating ?? "").trim() || null;
+  }
+  if (registrationTable.includes("running")) {
+    typedDetails.detail_competition_level = (parsed.data.registration_details?.competition_level ?? details.competition_level ?? "").trim() || null;
+  }
+  if (registrationTable.includes("talent_show")) {
+    typedDetails.detail_talent_type = (parsed.data.registration_details?.talent_type ?? details.talent_type ?? "").trim() || null;
+    typedDetails.detail_performance_description = (
+      parsed.data.registration_details?.performance_description ?? details.performance_description ?? ""
+    ).trim() || null;
+  }
+  if (registrationTable.includes("art_exhibition")) {
+    typedDetails.detail_art_category = (parsed.data.registration_details?.art_category ?? details.art_category ?? "").trim() || null;
+  }
+
+  const { error } = await supabase.from(registrationTable).insert({ ...basePayload, ...typedDetails });
 
   if (error) {
     if (error.message.toLowerCase().includes("duplicate")) {
@@ -319,7 +351,7 @@ export async function createActivityRegistrationAction(
   revalidatePath(`/register/${parsed.data.activity_slug}`);
   revalidatePath("/register");
   revalidatePath("/profile");
-  revalidatePath("/admin/registrations");
+  revalidateAdminRegistrationPages();
   return success("Registration submitted and saved successfully.");
 }
 
@@ -348,10 +380,15 @@ export async function updateActivityRegistrationAction(
     return failure(detailsValidationError);
   }
 
+  const registrationTable = getSafeRegistrationTableFromSlug(parsed.data.activity_slug);
+  if (!registrationTable) {
+    return failure("This activity is currently unavailable for registration.");
+  }
+
   const supabase = await createSupabaseServerClient();
   const { data: existing, error: existingError } = await supabase
-    .from("registrations")
-    .select("id, event_id, activity_slug, status")
+    .from(registrationTable)
+    .select("id, event_id, status")
     .eq("id", registrationId)
     .eq("user_id", user.id)
     .single();
@@ -360,17 +397,13 @@ export async function updateActivityRegistrationAction(
     return failure(existingError?.message ?? "Registration not found.");
   }
 
-  if (existing.activity_slug !== parsed.data.activity_slug) {
-    return failure("The selected registration does not match this activity.");
-  }
-
   if (existing.status === "approved") {
     return failure("Approved registrations cannot be edited.");
   }
 
   if (parsed.data.event_id !== existing.event_id) {
     const { data: duplicateRows } = await supabase
-      .from("registrations")
+      .from("v_activity_registrations_all")
       .select("id")
       .eq("user_id", user.id)
       .eq("event_id", parsed.data.event_id)
@@ -383,7 +416,7 @@ export async function updateActivityRegistrationAction(
 
     const { data: event, error: eventError } = await supabase
       .from("events")
-      .select("id, status, is_registration_open, max_participants, sports(slug)")
+      .select("id, status, is_registration_open, max_participants, activities(slug)")
       .eq("id", parsed.data.event_id)
       .single();
 
@@ -391,8 +424,8 @@ export async function updateActivityRegistrationAction(
       return failure(eventError?.message ?? "Event is unavailable.");
     }
 
-    const linkedSport = Array.isArray(event.sports) ? event.sports[0] : event.sports;
-    if (linkedSport?.slug !== parsed.data.activity_slug) {
+    const linkedActivity = Array.isArray(event.activities) ? event.activities[0] : event.activities;
+    if (linkedActivity?.slug !== parsed.data.activity_slug) {
       return failure("The selected event does not match the requested activity.");
     }
 
@@ -402,7 +435,7 @@ export async function updateActivityRegistrationAction(
 
     if (event.max_participants) {
       const { count } = await supabase
-        .from("registrations")
+        .from("v_activity_registrations_all")
         .select("id", { count: "exact", head: true })
         .eq("event_id", event.id);
 
@@ -412,26 +445,44 @@ export async function updateActivityRegistrationAction(
     }
   }
 
+  const typedDetails: Record<string, string | null> = {};
+  if (registrationTable.includes("football") || registrationTable.includes("basketball") || registrationTable.includes("handball") || registrationTable.includes("volleyball")) {
+    typedDetails.detail_gender = (parsed.data.registration_details?.gender ?? details.gender ?? "").trim() || null;
+  }
+  if (registrationTable.includes("chess")) {
+    typedDetails.detail_competition_level = (parsed.data.registration_details?.competition_level ?? details.competition_level ?? "").trim() || null;
+    typedDetails.detail_elo_rating = (parsed.data.registration_details?.elo_rating ?? details.elo_rating ?? "").trim() || null;
+  }
+  if (registrationTable.includes("running")) {
+    typedDetails.detail_competition_level = (parsed.data.registration_details?.competition_level ?? details.competition_level ?? "").trim() || null;
+  }
+  if (registrationTable.includes("talent_show")) {
+    typedDetails.detail_talent_type = (parsed.data.registration_details?.talent_type ?? details.talent_type ?? "").trim() || null;
+    typedDetails.detail_performance_description = (
+      parsed.data.registration_details?.performance_description ?? details.performance_description ?? ""
+    ).trim() || null;
+  }
+  if (registrationTable.includes("art_exhibition")) {
+    typedDetails.detail_art_category = (parsed.data.registration_details?.art_category ?? details.art_category ?? "").trim() || null;
+  }
+
   const { error } = await supabase
-    .from("registrations")
+    .from(registrationTable)
     .update({
       full_name: parsed.data.full_name,
       email: parsed.data.email,
       phone: parsed.data.phone,
       department_or_school: parsed.data.department_or_school,
-      category_type: parsed.data.category_type,
       event_id: parsed.data.event_id,
       team_name: parsed.data.team_name || null,
       additional_notes: parsed.data.additional_notes || null,
       emergency_contact: parsed.data.emergency_contact || null,
-      activity_slug: parsed.data.activity_slug,
       previous_experience: parsed.data.previous_experience,
       motivation: parsed.data.motivation,
-      availability_date: parsed.data.availability_date || null,
       preferred_role: parsed.data.preferred_role || null,
-      registration_details: parsed.data.registration_details ?? details,
       status: "pending",
       attendance_status: "pending",
+      ...typedDetails,
     })
     .eq("id", registrationId)
     .eq("user_id", user.id);
@@ -443,7 +494,7 @@ export async function updateActivityRegistrationAction(
   revalidatePath(`/register/${parsed.data.activity_slug}`);
   revalidatePath("/register");
   revalidatePath("/profile");
-  revalidatePath("/admin/registrations");
+  revalidateAdminRegistrationPages();
   return success("Registration updated successfully.");
 }
 
@@ -455,24 +506,29 @@ export async function deleteActivityRegistrationAction(formData: FormData): Prom
     return;
   }
 
+  const registrationTable = getSafeRegistrationTableFromSlug(activitySlug);
+  if (!registrationTable) {
+    return;
+  }
+
   const supabase = await createSupabaseServerClient();
   const { data: existing } = await supabase
-    .from("registrations")
-    .select("id, activity_slug, status")
+    .from(registrationTable)
+    .select("id, status")
     .eq("id", registrationId)
     .eq("user_id", user.id)
     .single();
 
-  if (!existing || existing.activity_slug !== activitySlug || existing.status === "approved") {
+  if (!existing || existing.status === "approved") {
     return;
   }
 
-  await supabase.from("registrations").delete().eq("id", registrationId).eq("user_id", user.id);
+  await supabase.from(registrationTable).delete().eq("id", registrationId).eq("user_id", user.id);
 
   revalidatePath(`/register/${activitySlug}`);
   revalidatePath("/register");
   revalidatePath("/profile");
-  revalidatePath("/admin/registrations");
+  revalidateAdminRegistrationPages();
 }
 
 export async function updateRegistrationStatusAction(formData: FormData): Promise<void> {
@@ -480,14 +536,16 @@ export async function updateRegistrationStatusAction(formData: FormData): Promis
 
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
-  if (!id || !["pending", "approved", "rejected"].includes(status)) {
+  const registrationTable = String(formData.get("registration_table") ?? "");
+  const allowedTables = new Set(getAllowedActivityRegistrationTables());
+  if (!id || !["pending", "approved", "rejected"].includes(status) || !allowedTables.has(registrationTable)) {
     return;
   }
 
   const supabase = await createSupabaseServerClient();
   const user = await getCurrentUser();
 
-  const { error } = await supabase.from("registrations").update({ status }).eq("id", id);
+  const { error } = await supabase.from(registrationTable).update({ status }).eq("id", id);
   if (error) {
     return;
   }
@@ -501,6 +559,6 @@ export async function updateRegistrationStatusAction(formData: FormData): Promis
     });
   }
 
-  revalidatePath("/admin/registrations");
+  revalidateAdminRegistrationPages();
   revalidatePath("/profile");
 }
