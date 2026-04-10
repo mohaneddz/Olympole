@@ -5,6 +5,7 @@ export type ProfileDraftCookie = {
   full_name?: string;
   school?: string;
   year_of_study?: string;
+  student_id?: string;
 };
 
 export type RegistrationDraftCookie = {
@@ -12,6 +13,7 @@ export type RegistrationDraftCookie = {
   email?: string;
   phone?: string;
   department_or_school?: string;
+  event_id?: string;
   team_name?: string;
   emergency_contact?: string;
   previous_experience?: string;
@@ -19,6 +21,13 @@ export type RegistrationDraftCookie = {
   preferred_role?: string;
   availability_date?: string;
   additional_notes?: string;
+  detail_gender?: string;
+  detail_competition_level?: string;
+  detail_race_category?: string;
+  detail_elo_rating?: string;
+  detail_talent_type?: string;
+  detail_performance_description?: string;
+  detail_art_category?: string;
   detail_strengths?: string;
   detail_schedule?: string;
 };
