@@ -1,32 +1,10 @@
 import Image from "next/image";
 import { SHARED_DECORATIVE_ELEMENTS } from "@/data/decoration";
-import { getCurrentUser } from "@/lib/auth";
-import { getPublicMatches, getUserPredictions } from "@/lib/queries";
+import { getFantasyRegisteredPlayers } from "@/lib/queries";
 import { PredictionsTabbedContent } from "@/components/predictions/PredictionsTabbedContent";
 
-type MatchRow = {
-  id: string;
-  status: "scheduled" | "live" | "completed";
-  team_a: string;
-  team_b: string;
-  score_a: number;
-  score_b: number;
-  venue: string | null;
-  starts_at: string;
-};
-
-type ExistingPrediction = {
-  match_id: string;
-  predicted_winner: string;
-};
-
 export default async function PredictionsPage() {
-  const [matches, user] = await Promise.all([getPublicMatches(), getCurrentUser()]);
-  const userPredictions = user ? await getUserPredictions(user.id) : [];
-
-  const matchRows = matches as MatchRow[];
-  const upcoming = matchRows.filter((match) => match.status !== "completed");
-  const results = matchRows.filter((match) => match.status === "completed");
+  const availablePlayers = await getFantasyRegisteredPlayers();
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
@@ -46,7 +24,7 @@ export default async function PredictionsPage() {
           <Image src="/images/brand/circles.png" alt="" width={243} height={134} aria-hidden className="mb-6 h-auto w-16 md:w-20 animate-fade-in-up" />
           <h1 className="font-heading text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8">
             <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60">
-              PREDICTIONS
+              FANTASY
             </span>
           </h1>
         </div>
@@ -58,11 +36,7 @@ export default async function PredictionsPage() {
             <Image key={i} src={el.src} alt="" width={120} height={120} aria-hidden className={`pointer-events-none ${el.className}`} />
           ))}
 
-          <PredictionsTabbedContent
-            upcoming={upcoming}
-            results={results}
-            userPredictions={userPredictions as ExistingPrediction[]}
-          />
+          <PredictionsTabbedContent availablePlayers={availablePlayers} />
         </div>
       </main>
     </div>
