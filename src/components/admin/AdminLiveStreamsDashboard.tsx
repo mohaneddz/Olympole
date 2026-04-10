@@ -7,6 +7,8 @@ import {
   updateLiveStreamStatusAction,
 } from "@/app/actions/events";
 import { AdminDataTable } from "@/components/admin/AdminDataTable";
+import { LiveStreamFormDialog } from "@/components/admin/LiveStreamFormDialog";
+import { Trash2 } from "lucide-react";
 
 type LiveStreamRow = {
   id: string;
@@ -117,100 +119,22 @@ export function AdminLiveStreamsDashboard({
         },
       ]}
       renderActions={(row) => (
-        <div className="w-[220px] space-y-2">
-          <form action={updateLiveStreamStatusAction} className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          <LiveStreamFormDialog
+            mode="edit"
+            stream={row}
+            events={events}
+            triggerClassName="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-300/40 text-cyan-100 hover:bg-cyan-400/15"
+          />
+          <form action={deleteLiveStreamAction}>
             <input type="hidden" name="id" value={row.id} />
-            <select
-              name="status"
-              defaultValue={row.status}
-              className="h-9 rounded-lg border border-card-border bg-background px-2 text-xs"
+            <button
+              title="Delete stream"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/60 text-red-300 hover:bg-red-500/15"
             >
-              <option value="draft">draft</option>
-              <option value="live">live</option>
-              <option value="ended">ended</option>
-            </select>
-            <button className="rounded-lg border border-card-border px-2 py-1 text-xs">Apply</button>
+              <Trash2 className="h-4 w-4" />
+            </button>
           </form>
-
-          <details className="rounded-lg border border-card-border/70 p-2 text-xs">
-            <summary className="cursor-pointer text-foreground/85">Edit stream</summary>
-            <form action={updateLiveStreamDetailsAction} className="mt-2 space-y-2">
-              <input type="hidden" name="id" value={row.id} />
-              <input type="hidden" name="status" value={row.status} />
-              <input
-                name="title"
-                defaultValue={row.title}
-                required
-                className="h-8 w-full rounded border border-card-border bg-background px-2"
-              />
-              <textarea
-                name="description"
-                defaultValue={row.description ?? ""}
-                className="min-h-14 w-full rounded border border-card-border bg-background px-2 py-1"
-              />
-              <input
-                name="playback_url"
-                defaultValue={row.playback_url ?? ""}
-                placeholder="https://..."
-                className="h-8 w-full rounded border border-card-border bg-background px-2"
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  name="access"
-                  defaultValue={row.access}
-                  className="h-8 rounded border border-card-border bg-background px-2"
-                >
-                  <option value="public">public</option>
-                  <option value="private">private</option>
-                </select>
-                <select
-                  name="event_id"
-                  defaultValue={row.event_id ?? ""}
-                  className="h-8 rounded border border-card-border bg-background px-2"
-                >
-                  <option value="">No event</option>
-                  {events.map((event) => (
-                    <option key={event.id} value={event.id}>
-                      {event.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="datetime-local"
-                  name="starts_at"
-                  defaultValue={toDateTimeLocalValue(row.starts_at)}
-                  className="h-8 rounded border border-card-border bg-background px-2"
-                />
-                <input
-                  type="datetime-local"
-                  name="ends_at"
-                  defaultValue={toDateTimeLocalValue(row.ends_at)}
-                  className="h-8 rounded border border-card-border bg-background px-2"
-                />
-              </div>
-              <button className="rounded border border-card-border px-2 py-1">Save</button>
-            </form>
-          </details>
-
-          <div className="flex items-center gap-2">
-            <form action={deleteLiveStreamAction}>
-              <input type="hidden" name="id" value={row.id} />
-              <button className="rounded-lg border border-red-500/60 px-2 py-1 text-xs text-red-300">
-                Delete
-              </button>
-            </form>
-            {row.playback_url ? (
-              <Link
-                href={row.playback_url}
-                target="_blank"
-                className="rounded-lg border border-card-border px-2 py-1 text-xs"
-              >
-                Open
-              </Link>
-            ) : null}
-          </div>
         </div>
       )}
     />

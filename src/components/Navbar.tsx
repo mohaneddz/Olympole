@@ -8,7 +8,7 @@ const navItems = [
   { name: "Culture", href: "/culture" },
   { name: "Live", href: "/live" },
   { name: "Schedule", href: "/schedule" },
-  { name: "Predictions", href: "/predictions" },
+  { name: "Fantasy", href: "/predictions" },
 ];
 
 export async function Navbar() {

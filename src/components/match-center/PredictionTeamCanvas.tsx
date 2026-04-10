@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check } from "lucide-react";
+import type { FantasyRegisteredPlayer } from "@/lib/queries";
 import { MATCH_TEAM_CONFIG, POSITION_LABELS } from "@/app/match-center/config";
 
 type TeamView = "pitch" | "list";
@@ -11,7 +12,10 @@ type PlayerNode = {
   role: string;
   x: number;
   y: number;
+  selectedPlayerId: string | null;
   name: string | null;
+  avatarUrl: string | null;
+  score: number;
 };
 
 const VIRTUAL_WIDTH = 1000;
@@ -31,7 +35,7 @@ const FORMATION_11: Array<{ x: number; y: number }> = [
   { x: 500, y: 1030 },
 ];
 
-const PRESELECTED_POSITIONS = new Set([1, 6, 8]);
+type SelectionRoleBucket = "goal" | "field";
 
 function roleLabel(role: string) {
   const map: Record<string, string> = {
@@ -49,6 +53,28 @@ function roleLabel(role: string) {
     SUB: "Substitute",
   };
   return map[role] ?? role;
+}
+
+function selectionBucketForRole(role: string): SelectionRoleBucket {
+  return role.toUpperCase() === "GK" ? "goal" : "field";
+}
+
+function bucketLabel(bucket: SelectionRoleBucket) {
+  return bucket === "goal" ? "Goalkeepers" : "Field Players";
+}
+
+function initialsFromName(name: string) {
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (parts.length === 0) {
+    return "P";
+  }
+
+  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("");
 }
 
 function fallbackPosition(index: number, count: number) {
@@ -83,43 +109,25 @@ function buildPlayers(count: number): PlayerNode[] {
       role,
       x: pos.x,
       y: pos.y,
-      name: PRESELECTED_POSITIONS.has(index) ? "Player Name" : null,
+      selectedPlayerId: null,
+      name: null,
+      avatarUrl: null,
+      score: 0,
     };
   });
 }
 
-export function PredictionTeamCanvas() {
+export function PredictionTeamCanvas({ availablePlayers }: { availablePlayers: FantasyRegisteredPlayer[] }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragIdRef = useRef<string | null>(null);
   const pitchPanelRef = useRef<HTMLDivElement | null>(null);
   const listPanelRef = useRef<HTMLDivElement | null>(null);
 
   const [view, setView] = useState<TeamView>("pitch");
-  const [playerCount, setPlayerCount] = useState<number>(MATCH_TEAM_CONFIG.defaultPlayers);
+  const playerCount = MATCH_TEAM_CONFIG.defaultPlayers;
   const [players, setPlayers] = useState<PlayerNode[]>(() => buildPlayers(MATCH_TEAM_CONFIG.defaultPlayers));
   const [panelMinHeight, setPanelMinHeight] = useState<number>(0);
-
-  useEffect(() => {
-    setPlayers((current) => {
-      if (current.length === playerCount) {
-        return current;
-      }
-
-      const next = buildPlayers(playerCount);
-      return next.map((player, index) => {
-        const existing = current[index];
-        if (!existing) {
-          return player;
-        }
-        return {
-          ...player,
-          x: existing.x,
-          y: existing.y,
-          name: existing.name,
-        };
-      });
-    });
-  }, [playerCount]);
+  const [pickerOpenForPlayerId, setPickerOpenForPlayerId] = useState<string | null>(null);
 
   useEffect(() => {
     const measure = () => {
@@ -192,13 +200,29 @@ export function PredictionTeamCanvas() {
     event.currentTarget.releasePointerCapture(event.pointerId);
   }, []);
 
-  const canAdd = playerCount < MATCH_TEAM_CONFIG.maxPlayers;
-  const canRemove = playerCount > MATCH_TEAM_CONFIG.minPlayers;
-
-  const playerSummary = useMemo(
-    () => `Players ${playerCount} (min ${MATCH_TEAM_CONFIG.minPlayers} - max ${MATCH_TEAM_CONFIG.maxPlayers})`,
-    [playerCount]
+  const playerSummary = `Players ${playerCount}`;
+  const pickerTarget = useMemo(
+    () => players.find((player) => player.id === pickerOpenForPlayerId) ?? null,
+    [players, pickerOpenForPlayerId]
   );
+  const pickerBucket = pickerTarget ? selectionBucketForRole(pickerTarget.role) : null;
+  const selectableCandidates = useMemo(() => {
+    if (!pickerBucket) {
+      return [];
+    }
+
+    const usedIds = new Set(
+      players
+        .filter((player) => player.id !== pickerOpenForPlayerId)
+        .map((player) => player.selectedPlayerId)
+        .filter(Boolean)
+    );
+
+    return availablePlayers.filter((candidate) => (
+      candidate.role_bucket === pickerBucket && !usedIds.has(candidate.id)
+    ));
+  }, [availablePlayers, pickerBucket, players, pickerOpenForPlayerId]);
+
   const outer = useMemo(() => ({
     x: 40,
     y: 56,
@@ -213,6 +237,25 @@ export function PredictionTeamCanvas() {
   const cardW = MATCH_TEAM_CONFIG.playerCardWidth;
   const cardH = MATCH_TEAM_CONFIG.playerCardHeight;
   const topH = cardH * 0.56;
+  const choosePlayer = useCallback((candidate: FantasyRegisteredPlayer) => {
+    if (!pickerOpenForPlayerId) {
+      return;
+    }
+
+    setPlayers((current) => current.map((item) => (
+      item.id === pickerOpenForPlayerId
+        ? {
+          ...item,
+          selectedPlayerId: candidate.id,
+          name: candidate.name,
+          avatarUrl: candidate.avatar_url,
+          score: candidate.current_score,
+        }
+        : item
+    )));
+
+    setPickerOpenForPlayerId(null);
+  }, [pickerOpenForPlayerId]);
 
   return (
     <section id="team" className="space-y-8">
@@ -241,26 +284,8 @@ export function PredictionTeamCanvas() {
           </button>
         </div>
 
-        <div className="flex items-center justify-center gap-3 text-sm text-cyan-100">
-          <button
-            type="button"
-            disabled={!canRemove}
-            onClick={() => setPlayerCount((count) => Math.max(MATCH_TEAM_CONFIG.minPlayers, count - 1))}
-            className="h-8 w-8 rounded-md border border-cyan-200/60 text-lg disabled:opacity-40"
-            aria-label="Decrease players"
-          >
-            -
-          </button>
+        <div className="flex items-center justify-center text-sm text-cyan-100">
           <span>{playerSummary}</span>
-          <button
-            type="button"
-            disabled={!canAdd}
-            onClick={() => setPlayerCount((count) => Math.min(MATCH_TEAM_CONFIG.maxPlayers, count + 1))}
-            className="h-8 w-8 rounded-md border border-cyan-200/60 text-lg disabled:opacity-40"
-            aria-label="Increase players"
-          >
-            +
-          </button>
         </div>
       </div>
 
@@ -345,15 +370,28 @@ export function PredictionTeamCanvas() {
                 </div>
                 <div className="px-5 py-3">
                   {selected ? (
-                    <span className="text-cyan-100 text-base md:text-xl font-semibold">{player.name}</span>
+                    <div className="flex items-center gap-3">
+                      {player.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={player.avatarUrl}
+                          alt={player.name ?? "Selected player"}
+                          className="h-10 w-10 rounded-full object-cover border border-cyan-200/40"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-cyan-200/40 bg-[#102457] text-sm font-bold text-cyan-100">
+                          {initialsFromName(player.name ?? "Player")}
+                        </div>
+                      )}
+                      <div className="text-left">
+                        <p className="text-cyan-100 text-base md:text-xl font-semibold leading-tight">{player.name}</p>
+                        <p className="text-cyan-200/80 text-xs md:text-sm">{player.score} pts</p>
+                      </div>
+                    </div>
                   ) : (
                     <button
                       type="button"
-                      onClick={() => {
-                        setPlayers((current) => current.map((item) => (
-                          item.id === player.id ? { ...item, name: "Player Name" } : item
-                        )));
-                      }}
+                      onClick={() => setPickerOpenForPlayerId(player.id)}
                       className="h-10 min-w-36 rounded-lg border border-cyan-300/70 px-4 text-base font-bold text-white"
                     >
                       SELECT
@@ -365,6 +403,72 @@ export function PredictionTeamCanvas() {
           })}
         </div>
       </div>
+
+      {pickerOpenForPlayerId ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#020617]/70 px-4">
+          <div className="w-full max-w-3xl rounded-2xl border border-cyan-300/30 bg-[#0b1537] p-5 md:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <h3 className="text-xl md:text-2xl font-bold text-white">
+                  Select {bucketLabel(pickerBucket ?? "field")}
+                </h3>
+                <p className="text-sm text-cyan-100/80">
+                  Role slot: <span className="font-semibold">{pickerTarget?.role ?? "-"}</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPickerOpenForPlayerId(null)}
+                className="rounded-md border border-cyan-300/40 px-3 py-1.5 text-sm font-semibold text-cyan-100 hover:bg-cyan-300/10"
+              >
+                Close
+              </button>
+            </div>
+
+            {selectableCandidates.length === 0 ? (
+              <div className="rounded-xl border border-cyan-300/20 bg-[#10204b] p-5 text-center text-cyan-100/80">
+                No available players for this role.
+              </div>
+            ) : (
+              <div className="max-h-[26rem] space-y-3 overflow-auto pr-1">
+                {selectableCandidates.map((candidate) => (
+                  <button
+                    key={candidate.id}
+                    type="button"
+                    onClick={() => choosePlayer(candidate)}
+                    className="w-full rounded-xl border border-cyan-300/20 bg-[#10204b] p-3 text-left transition hover:border-cyan-300/60 hover:bg-[#15306e]"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {candidate.avatar_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={candidate.avatar_url}
+                            alt={candidate.name}
+                            className="h-12 w-12 rounded-full object-cover border border-cyan-200/40"
+                          />
+                        ) : (
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-cyan-200/40 bg-[#0f265a] text-sm font-bold text-cyan-100">
+                            {initialsFromName(candidate.name)}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="truncate text-base md:text-lg font-semibold text-white">{candidate.name}</p>
+                          <p className="truncate text-xs md:text-sm text-cyan-100/80">{candidate.email ?? "No email"}</p>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-base md:text-lg font-bold text-cyan-200">{candidate.current_score} pts</p>
+                        <p className="text-xs text-cyan-100/75">{candidate.preferred_role ?? "Field player"}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
 
       <div className="text-center">
         <button
