@@ -8,6 +8,34 @@ export type AppSettings = {
   registration_max_events_per_user: number;
 };
 
+export type FantasyRegisteredPlayer = {
+  id: string;
+  profile_id: string | null;
+  name: string;
+  email: string | null;
+  avatar_url: string | null;
+  preferred_role: string | null;
+  current_score: number;
+  role_bucket: "goal" | "field";
+};
+
+function inferFantasyRoleBucket(preferredRole: string | null): "goal" | "field" {
+  const normalized = preferredRole?.trim().toLowerCase() ?? "";
+  if (!normalized) {
+    return "field";
+  }
+
+  if (
+    normalized.includes("goal")
+    || normalized.includes("keeper")
+    || normalized.includes("gk")
+  ) {
+    return "goal";
+  }
+
+  return "field";
+}
+
 export async function getPublicSports() {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -247,6 +275,64 @@ export async function getPublicLiveStreams() {
   }
 
   return data ?? [];
+}
+
+export async function getFantasyRegisteredPlayers(): Promise<FantasyRegisteredPlayer[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("v_profile_activity_registrations")
+    .select("id, profile_id, full_name, email, preferred_role, detail_gender, status, activity_slug, created_at")
+    .eq("activity_slug", "football")
+    .eq("status", "approved")
+    .eq("detail_gender", "men")
+    .order("created_at", { ascending: false });
+
+  if (error || !data?.length) {
+    return [];
+  }
+
+  const profileIds = [...new Set(data.map((row) => row.profile_id).filter(Boolean))] as string[];
+
+  const [profilesRes, scoresRes] = await Promise.all([
+    profileIds.length > 0
+      ? supabase.from("profiles").select("id, avatar_url").in("id", profileIds)
+      : Promise.resolve({ data: [], error: null }),
+    profileIds.length > 0
+      ? supabase.from("fantasy_manager_gameweek_scores").select("profile_id, total_points").in("profile_id", profileIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  const avatarByProfile = new Map<string, string | null>();
+  for (const row of profilesRes.data ?? []) {
+    avatarByProfile.set(row.id, row.avatar_url ?? null);
+  }
+
+  const scoreByProfile = new Map<string, number>();
+  for (const row of scoresRes.data ?? []) {
+    const existing = scoreByProfile.get(row.profile_id) ?? 0;
+    scoreByProfile.set(row.profile_id, existing + (row.total_points ?? 0));
+  }
+
+  const deduped = new Map<string, FantasyRegisteredPlayer>();
+  for (const row of data) {
+    const key = row.profile_id ?? `${row.email?.toLowerCase() ?? "unknown"}:${row.full_name.toLowerCase()}`;
+    if (deduped.has(key)) {
+      continue;
+    }
+
+    deduped.set(key, {
+      id: row.profile_id ?? row.id,
+      profile_id: row.profile_id,
+      name: row.full_name,
+      email: row.email ?? null,
+      avatar_url: row.profile_id ? (avatarByProfile.get(row.profile_id) ?? null) : null,
+      preferred_role: row.preferred_role ?? null,
+      current_score: row.profile_id ? (scoreByProfile.get(row.profile_id) ?? 0) : 0,
+      role_bucket: inferFantasyRoleBucket(row.preferred_role ?? null),
+    });
+  }
+
+  return [...deduped.values()].sort((a, b) => b.current_score - a.current_score || a.name.localeCompare(b.name));
 }
 
 export async function getAdminLiveStreams() {

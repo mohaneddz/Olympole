@@ -42,13 +42,6 @@ export function ActivityPanel({ registrations }: ActivityPanelProps) {
         Registrations
       </h2>
 
-      <div className="mt-5 border-t border-cyan-300/20 pt-5">
-        <h3 className="flex items-center gap-2 text-2xl font-bold text-white">
-          <Trophy className="h-5 w-5 text-violet-300" />
-          Your Registrations
-        </h3>
-        <p className="mt-1 text-cyan-100/70">{registrations.length} registered or accepted events</p>
-      </div>
 
       <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
         {registrations.length === 0 ? (
