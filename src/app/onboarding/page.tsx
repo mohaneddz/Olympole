@@ -10,7 +10,12 @@ export default async function OnboardingPage() {
   const cookieStore = await cookies();
   const draft = parseProfileDraftCookie(cookieStore.get(PROFILE_DRAFT_COOKIE)?.value);
 
-  if (profile?.full_name && profile?.school && profile?.year_of_study) {
+  if (
+    profile?.full_name?.trim()
+    && profile?.school?.trim()
+    && profile?.year_of_study?.trim()
+    && profile?.student_id?.trim()
+  ) {
     if (profile.role === "admin") {
       redirect("/admin");
     }
@@ -23,6 +28,7 @@ export default async function OnboardingPage() {
         defaultName={profile?.full_name ?? draft?.full_name}
         defaultSchool={profile?.school ?? draft?.school}
         defaultYear={profile?.year_of_study ?? draft?.year_of_study}
+        defaultStudentId={profile?.student_id ?? draft?.student_id}
       />
     </div>
   );
