@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import sharp from "sharp";
 import { failure, success, type ActionResponse } from "@/lib/actions";
 import { getCurrentUserRoles, requireAuth } from "@/lib/auth";
 import { PROFILE_DRAFT_COOKIE } from "@/lib/cookie-drafts";
@@ -11,6 +12,17 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { profileCompletionSchema, profileUpdateSchema } from "@/lib/validators";
 
 const PROFILE_AVATAR_BUCKETS = ["profile-pfps", "avatars"] as const;
+const ACCEPTED_AVATAR_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpg",
+  "image/jpeg",
+  "image/webp",
+  "image/avif",
+  "image/heic",
+  "image/heif",
+]);
+const MAX_AVATAR_UPLOAD_BYTES = 20 * 1024 * 1024;
+const MAX_AVATAR_STORED_BYTES = 5 * 1024 * 1024;
 
 function extractStorageObjectFromPublicUrl(url: string | null | undefined) {
   if (!url) {
@@ -49,11 +61,16 @@ function isBucketMissingError(message: string) {
   return lowered.includes("bucket not found") || lowered.includes("does not exist");
 }
 
+function isUnsupportedMimeError(message: string) {
+  const lowered = message.toLowerCase();
+  return lowered.includes("mime type") && lowered.includes("not supported");
+}
+
 async function ensureAvatarBucket(adminSupabase: ReturnType<typeof createSupabaseAdminClient>, bucket: string) {
   const { error } = await adminSupabase.storage.createBucket(bucket, {
     public: true,
-    fileSizeLimit: 5 * 1024 * 1024,
-    allowedMimeTypes: ["image/webp"],
+    fileSizeLimit: MAX_AVATAR_STORED_BYTES,
+    allowedMimeTypes: ["image/avif"],
   });
 
   if (!error) {
@@ -68,14 +85,63 @@ async function ensureAvatarBucket(adminSupabase: ReturnType<typeof createSupabas
   return false;
 }
 
+async function ensureAvatarBucketMimeSupport(
+  adminSupabase: ReturnType<typeof createSupabaseAdminClient>,
+  bucket: string
+) {
+  const { error } = await adminSupabase.storage.updateBucket(bucket, {
+    public: true,
+    fileSizeLimit: MAX_AVATAR_STORED_BYTES,
+    allowedMimeTypes: ["image/avif"],
+  });
+
+  if (!error) {
+    return true;
+  }
+
+  const lowered = error.message.toLowerCase();
+  if (lowered.includes("not found") || lowered.includes("does not exist")) {
+    return ensureAvatarBucket(adminSupabase, bucket);
+  }
+
+  return false;
+}
+
+async function normalizeAvatarToAvif(avatarFile: File) {
+  const inputBuffer = Buffer.from(await avatarFile.arrayBuffer());
+
+  try {
+    const converted = await sharp(inputBuffer, { failOn: "none" })
+      .rotate()
+      .resize({
+        width: 1024,
+        height: 1024,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .avif({ quality: 62, effort: 4 })
+      .toBuffer();
+
+    if (converted.byteLength > MAX_AVATAR_STORED_BYTES) {
+      return { error: "Processed avatar is too large. Please choose a smaller image." as const };
+    }
+
+    return { buffer: converted } as const;
+  } catch (error) {
+    return {
+      error: `Failed to process avatar image. Ensure it is a valid png/jpg/jpeg/webp/avif/heic file. (${error instanceof Error ? error.message : "unknown"})` as const,
+    };
+  }
+}
+
 async function uploadAvatarWithFallback(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   adminSupabase: ReturnType<typeof createSupabaseAdminClient> | null,
   userId: string,
-  avatarFile: File
+  avatarBuffer: Buffer
 ) {
   const storageClient = adminSupabase ?? supabase;
-  const newAvatarPath = `${userId}/avatar-${Date.now()}.webp`;
+  const newAvatarPath = `${userId}/avatar-${Date.now()}.avif`;
   let uploadedToBucket: string | null = null;
   let nextAvatarUrl: string | null = null;
   let lastUploadErrorMessage = "Unknown upload error.";
@@ -83,8 +149,8 @@ async function uploadAvatarWithFallback(
   for (const bucket of PROFILE_AVATAR_BUCKETS) {
     let { error: uploadError } = await storageClient.storage
       .from(bucket)
-      .upload(newAvatarPath, avatarFile, {
-        contentType: "image/webp",
+      .upload(newAvatarPath, avatarBuffer, {
+        contentType: "image/avif",
         cacheControl: "3600",
         upsert: false,
       });
@@ -94,8 +160,22 @@ async function uploadAvatarWithFallback(
       if (bucketReady) {
         const retry = await adminSupabase.storage
           .from(bucket)
-          .upload(newAvatarPath, avatarFile, {
-            contentType: "image/webp",
+          .upload(newAvatarPath, avatarBuffer, {
+            contentType: "image/avif",
+            cacheControl: "3600",
+            upsert: false,
+          });
+        uploadError = retry.error;
+      }
+    }
+
+    if (uploadError && isUnsupportedMimeError(uploadError.message) && adminSupabase) {
+      const mimeReady = await ensureAvatarBucketMimeSupport(adminSupabase, bucket);
+      if (mimeReady) {
+        const retry = await adminSupabase.storage
+          .from(bucket)
+          .upload(newAvatarPath, avatarBuffer, {
+            contentType: "image/avif",
             cacheControl: "3600",
             upsert: false,
           });
@@ -126,6 +206,7 @@ export async function completeProfileAction(_: ActionResponse, formData: FormDat
     full_name: formData.get("full_name"),
     school: formData.get("school"),
     year_of_study: formData.get("year_of_study"),
+    student_id: formData.get("student_id"),
   });
 
   if (!parsed.success) {
@@ -139,6 +220,7 @@ export async function completeProfileAction(_: ActionResponse, formData: FormDat
       full_name: parsed.data.full_name,
       school: parsed.data.school,
       year_of_study: parsed.data.year_of_study,
+      student_id: parsed.data.student_id,
     })
     .eq("id", user.id);
 
@@ -194,15 +276,20 @@ export async function updateProfileAction(_: ActionResponse, formData: FormData)
   let newAvatarPath: string | null = null;
 
   if (avatarFile instanceof File && avatarFile.size > 0) {
-    if (avatarFile.type !== "image/webp") {
-      return failure("Avatar must be uploaded as .webp format.");
+    if (!ACCEPTED_AVATAR_MIME_TYPES.has(avatarFile.type)) {
+      return failure("Avatar must be one of: png, jpg, jpeg, webp, avif, heic.");
     }
 
-    if (avatarFile.size > 5 * 1024 * 1024) {
-      return failure("Avatar is too large. Maximum allowed size is 5MB.");
+    if (avatarFile.size > MAX_AVATAR_UPLOAD_BYTES) {
+      return failure("Avatar is too large. Maximum upload size is 20MB.");
     }
 
-    const uploadResult = await uploadAvatarWithFallback(supabase, adminSupabase, user.id, avatarFile);
+    const normalized = await normalizeAvatarToAvif(avatarFile);
+    if ("error" in normalized) {
+      return failure(normalized.error as string as string as string as string);
+    }
+
+    const uploadResult = await uploadAvatarWithFallback(supabase, adminSupabase, user.id, normalized.buffer);
     uploadedToBucket = uploadResult.uploadedToBucket;
     newAvatarPath = uploadResult.newAvatarPath;
     nextAvatarUrl = uploadResult.nextAvatarUrl ?? nextAvatarUrl;
@@ -257,12 +344,12 @@ export async function uploadProfileAvatarAction(_: ActionResponse, formData: For
     return failure("Please select an avatar image.");
   }
 
-  if (avatarFile.type !== "image/webp") {
-    return failure("Avatar must be uploaded as .webp format.");
+  if (!ACCEPTED_AVATAR_MIME_TYPES.has(avatarFile.type)) {
+    return failure("Avatar must be one of: png, jpg, jpeg, webp, avif, heic.");
   }
 
-  if (avatarFile.size > 5 * 1024 * 1024) {
-    return failure("Avatar is too large. Maximum allowed size is 5MB.");
+  if (avatarFile.size > MAX_AVATAR_UPLOAD_BYTES) {
+    return failure("Avatar is too large. Maximum upload size is 20MB.");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -281,7 +368,11 @@ export async function uploadProfileAvatarAction(_: ActionResponse, formData: For
     .single();
 
   const currentAvatarObject = extractStorageObjectFromPublicUrl(existingProfile?.avatar_url);
-  const uploadResult = await uploadAvatarWithFallback(supabase, adminSupabase, user.id, avatarFile);
+  const normalized = await normalizeAvatarToAvif(avatarFile);
+  if ("error" in normalized) {
+      return failure((normalized.error as string) ?? "Failed to process avatar.");
+  }
+  const uploadResult = await uploadAvatarWithFallback(supabase, adminSupabase, user.id, normalized.buffer);
 
   if (!uploadResult.uploadedToBucket || !uploadResult.nextAvatarUrl) {
     return failure(`Failed to upload avatar: ${uploadResult.lastUploadErrorMessage}.`);
@@ -308,4 +399,24 @@ export async function uploadProfileAvatarAction(_: ActionResponse, formData: For
 
   revalidatePath("/profile");
   return success("Avatar updated successfully.");
+}
+
+export async function deleteAccountAction(): Promise<ActionResponse> {
+  const user = await requireAuth();
+  let adminSupabase: ReturnType<typeof createSupabaseAdminClient> | null = null;
+
+  try {
+    adminSupabase = createSupabaseAdminClient();
+  } catch {
+    return failure("Delete account is unavailable right now. Missing server admin key.");
+  }
+
+  const { error } = await adminSupabase.auth.admin.deleteUser(user.id, true);
+  if (error) {
+    return failure(`Failed to delete account: ${error.message}`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.signOut();
+  redirect("/");
 }

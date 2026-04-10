@@ -3,6 +3,7 @@ import { ActivityPanel } from "@/components/profile/ActivityPanel";
 import { ProfileHeaderCard } from "@/components/profile/ProfileHeaderCard";
 import Link from "next/link";
 import { requireAuth, getCurrentProfile, getCurrentUserRoles } from "@/lib/auth";
+import { getAdminEmails } from "@/lib/env";
 import { getUserPredictions, getUserRegistrations } from "@/lib/queries";
 import { Shield } from "lucide-react";
 
@@ -47,33 +48,21 @@ export default async function ProfilePage() {
   const timezone = profile?.timezone || "Africa/Algiers";
   const yearLabel = profile?.year_of_study ?? "";
   const isAdmin = roles.includes("admin");
-
-  const activityPredictions = predictions.map((prediction) => {
-    const matchRelation = prediction.matches as
-      | { team_a?: string; team_b?: string }
-      | Array<{ team_a?: string; team_b?: string }>
-      | null;
-    const match = Array.isArray(matchRelation) ? matchRelation[0] : matchRelation;
-    return {
-      id: prediction.id,
-      matchLabel: `${match?.team_a ?? "Team A"} vs ${match?.team_b ?? "Team B"}`,
-      picked: prediction.predicted_winner,
-      outcome: prediction.outcome,
-      points: prediction.points_awarded ?? 0,
-      createdAt: prediction.created_at,
-    };
-  });
+  const isEnvAdmin = getAdminEmails().includes((user.email ?? "").toLowerCase());
 
   const activityRegistrations = registrations.map((registration) => {
+    if (!["pending", "approved"].includes(registration.status)) {
+      return null;
+    }
+
     const event = Array.isArray(registration.events) ? registration.events[0] : registration.events;
     return {
       id: registration.id,
       title: event?.title ?? "Unknown event",
-      startsAt: event?.starts_at ? new Date(event.starts_at).toLocaleString() : "Date TBD",
-      venue: event?.venue ?? "Venue TBD",
-      status: registration.status,
+      statusLabel: registration.status === "approved" ? "Accepted" : "Pending",
+      activityType: registration.category_type,
     };
-  });
+  }).filter((registration): registration is NonNullable<typeof registration> => Boolean(registration));
 
   return (
     <div className="w-full min-h-screen">
@@ -89,6 +78,7 @@ export default async function ProfilePage() {
           registrationsCount={registrations.length}
           predictionsCount={predictions.length}
           roleLabel={isAdmin ? "Admin" : "Participant"}
+          avatarSeed={profile?.id ?? displayEmail}
         />
 
         <div className="mt-6 grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12">
@@ -98,6 +88,7 @@ export default async function ProfilePage() {
                 full_name: profile?.full_name ?? null,
                 school: profile?.school ?? null,
                 year_of_study: profile?.year_of_study ?? null,
+                student_id: profile?.student_id ?? null,
                 username: profile?.username ?? null,
                 phone: profile?.phone ?? null,
                 bio: profile?.bio ?? null,
@@ -107,15 +98,12 @@ export default async function ProfilePage() {
           </section>
 
           <section className="h-full lg:col-span-5">
-            <ActivityPanel
-              predictions={activityPredictions}
-              registrations={activityRegistrations}
-            />
+            <ActivityPanel registrations={activityRegistrations} />
           </section>
         </div>
       </div>
 
-      {isAdmin ? (
+      {isEnvAdmin ? (
         <Link
           href="/admin"
           aria-label="Open Admin Dashboard"

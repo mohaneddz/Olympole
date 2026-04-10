@@ -37,6 +37,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} ${tomoBossa.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground selection:bg-primary/30">

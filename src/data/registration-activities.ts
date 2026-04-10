@@ -10,6 +10,7 @@ export type RegistrationActivity = {
   experiencePrompt: string;
   motivationPrompt: string;
   rolePrompt: string;
+  rolesList?: string[];
   defaultAvailabilityHint: string;
 };
 
@@ -24,6 +25,7 @@ export const REGISTRATION_ACTIVITIES: RegistrationActivity[] = [
     experiencePrompt: "Tell us your football experience (position, years played, and recent competitions).",
     motivationPrompt: "Why do you want to represent your school in Football this year?",
     rolePrompt: "Preferred position / role",
+    rolesList: ["Field Player", "Goal Keeper"],
     defaultAvailabilityHint: "availability for match days and team training",
   },
   {

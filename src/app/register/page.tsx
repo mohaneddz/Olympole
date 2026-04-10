@@ -41,7 +41,7 @@ export default async function RegisterPage() {
     );
   }
 
-  if (!profile?.full_name || !profile?.school || !profile?.year_of_study) {
+  if (!profile?.full_name || !profile?.school || !profile?.year_of_study || !profile?.student_id) {
     redirect("/onboarding");
   }
 

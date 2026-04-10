@@ -307,6 +307,7 @@ export async function createMatchAction(_: ActionResponse, formData: FormData): 
   revalidatePath("/admin/events");
   revalidatePath("/match-center");
   revalidatePath("/predictions");
+  revalidatePath("/predictions/match");
   return success("Match created.");
 }
 
@@ -384,6 +385,7 @@ export async function updateMatchAction(formData: FormData): Promise<void> {
   revalidatePath("/match-center");
   revalidatePath("/results");
   revalidatePath("/predictions");
+  revalidatePath("/predictions/match");
 }
 
 export async function createResultAction(_: ActionResponse, formData: FormData): Promise<ActionResponse> {
@@ -486,6 +488,7 @@ export async function scoreMatchPredictionsAction(formData: FormData): Promise<v
 
   await logAdmin("prediction_score_rerun", "match", matchId);
   revalidatePath("/predictions");
+  revalidatePath("/predictions/match");
   revalidatePath("/profile");
   revalidatePath("/admin/events");
 }

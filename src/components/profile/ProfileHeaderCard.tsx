@@ -1,12 +1,9 @@
 "use client";
 
-import { startTransition, useActionState, useRef, useState } from "react";
+import { useActionState, useRef, useState } from "react";
+import { CalendarCheck2, Dices, Mail, MapPin, Shield, Sparkles, Upload } from "lucide-react";
 import { uploadProfileAvatarAction } from "@/app/actions/profile";
-import { CalendarCheck2, Mail, MapPin, Shield, Sparkles } from "lucide-react";
-
-const initialState = { ok: false, message: "" };
-const MAX_SOURCE_FILE_SIZE = 8 * 1024 * 1024;
-const MAX_OUTPUT_SIDE = 640;
+import { createAvatarGradient } from "@/lib/avatar-gradient";
 
 type ProfileHeaderCardProps = {
   displayName: string;
@@ -19,33 +16,8 @@ type ProfileHeaderCardProps = {
   registrationsCount: number;
   predictionsCount: number;
   roleLabel: string;
+  avatarSeed: string;
 };
-
-async function convertToWebp(file: File) {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_OUTPUT_SIDE / Math.max(bitmap.width, bitmap.height));
-  const width = Math.max(1, Math.round(bitmap.width * scale));
-  const height = Math.max(1, Math.round(bitmap.height * scale));
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext("2d");
-
-  if (!context) {
-    throw new Error("Failed to prepare image conversion.");
-  }
-
-  context.drawImage(bitmap, 0, 0, width, height);
-  const webpBlob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, "image/webp", 0.88)
-  );
-
-  if (!webpBlob) {
-    throw new Error("Failed to generate .webp avatar.");
-  }
-
-  return new File([webpBlob], `avatar-${Date.now()}.webp`, { type: "image/webp" });
-}
 
 export function ProfileHeaderCard({
   displayName,
@@ -58,71 +30,90 @@ export function ProfileHeaderCard({
   registrationsCount,
   predictionsCount,
   roleLabel,
+  avatarSeed,
 }: ProfileHeaderCardProps) {
+  const uploadFormRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadState, uploadFormAction, uploading] = useActionState(uploadProfileAvatarAction, { ok: false, message: "" });
   const [previewUrl, setPreviewUrl] = useState<string | null>(avatarUrl);
-  const [localError, setLocalError] = useState("");
-  const [state, action, pending] = useActionState(uploadProfileAvatarAction, initialState);
-
-  async function onAvatarPick(event: React.ChangeEvent<HTMLInputElement>) {
-    const sourceFile = event.target.files?.[0];
-    setLocalError("");
-    if (!sourceFile) {
-      return;
-    }
-
-    if (!sourceFile.type.startsWith("image/")) {
-      setLocalError("Please select an image file.");
-      return;
-    }
-
-    if (sourceFile.size > MAX_SOURCE_FILE_SIZE) {
-      setLocalError("Image is too large. Maximum allowed size is 8MB.");
-      return;
-    }
-
-    try {
-      const converted = await convertToWebp(sourceFile);
-      setPreviewUrl(URL.createObjectURL(converted));
-      const formData = new FormData();
-      formData.set("avatar", converted);
-      startTransition(() => action(formData));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to process image.";
-      setLocalError(message);
-    }
-  }
+  const [avatarVariant, setAvatarVariant] = useState(0);
+  const avatarFallback = createAvatarGradient(`${avatarSeed}:${avatarVariant}`);
 
   return (
     <section className="rounded-3xl border border-cyan-300/20 bg-[linear-gradient(130deg,rgba(4,17,50,0.82),rgba(3,10,32,0.92))] p-6 shadow-2xl backdrop-blur-xl md:p-9">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
           <div className="flex flex-col items-center gap-2">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="group relative h-36 w-36 shrink-0 cursor-pointer overflow-hidden rounded-full border-4 border-cyan-300/70 bg-background transition-transform hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-cyan-300/75"
-            >
-              {previewUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={previewUrl} alt="Profile avatar" className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-4xl font-black text-cyan-100/90">
-                  {initials}
-                </div>
-              )}
-              <span className="pointer-events-none absolute inset-0 bg-cyan-300/0 transition-colors group-hover:bg-cyan-300/10" />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={onAvatarPick}
-            />
-            <p className="text-xs text-cyan-100/70">
-              {pending ? "Uploading..." : "Click photo to change"}
-            </p>
+            <form ref={uploadFormRef} action={uploadFormAction} className="flex flex-col items-center gap-2">
+              <div className="group relative h-36 w-36 shrink-0 overflow-hidden rounded-full border-4 border-cyan-300/70 bg-background">
+                {previewUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={previewUrl} alt="Profile avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <div
+                    className="relative flex h-full w-full items-center justify-center overflow-hidden"
+                    style={{ backgroundImage: avatarFallback.backgroundImage }}
+                  >
+                    <span
+                      className="relative z-10 text-4xl font-black"
+                      style={{ color: avatarFallback.textColor }}
+                    >
+                      {initials}
+                    </span>
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 opacity-20 mix-blend-soft-light"
+                      style={{
+                        backgroundImage: "radial-gradient(rgba(255,255,255,0.9) 0.6px, transparent 0.6px)",
+                        backgroundSize: "3px 3px",
+                      }}
+                    />
+                  </div>
+                )}
+                <span className="pointer-events-none absolute inset-0" />
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                name="avatar"
+                accept=".png,.jpg,.jpeg,.webp,.avif,.heic,image/png,image/jpg,image/jpeg,image/webp,image/avif,image/heic,image/heif"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) {
+                    return;
+                  }
+                  setPreviewUrl(URL.createObjectURL(file));
+                  uploadFormRef.current?.requestSubmit();
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/45 bg-cyan-400/20 px-3 py-1 text-xs font-semibold text-cyan-50 transition-colors hover:bg-cyan-400/30 disabled:cursor-not-allowed disabled:opacity-55"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                {uploading ? "Uploading..." : "Upload"}
+              </button>
+            </form>
+            {!previewUrl ? (
+              <button
+                type="button"
+                onClick={() => setAvatarVariant((value) => value + 1)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/45 bg-cyan-300/10 px-3 py-1 text-xs font-semibold text-cyan-100 transition-colors hover:bg-cyan-300/20"
+              >
+                <Dices className="h-3.5 w-3.5" />
+                Randomize
+              </button>
+            ) : null}
+            {uploadState.message ? (
+              <p className={`max-w-[220px] text-center text-xs ${uploadState.ok ? "text-green-300" : "text-red-300"}`}>
+                {uploadState.message}
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-2">
@@ -137,11 +128,6 @@ export function ProfileHeaderCard({
               <MapPin className="h-5 w-5 text-violet-300" />
               {timezone} {yearLabel ? ` • Year ${yearLabel}` : ""}
             </p>
-            {(localError || state.message) ? (
-              <p className={state.ok ? "text-sm text-green-300" : "text-sm text-red-300"}>
-                {localError || state.message}
-              </p>
-            ) : null}
           </div>
         </div>
 

@@ -26,6 +26,8 @@ export async function updateSettingAction(formData: FormData) {
   revalidatePath("/admin/settings");
   revalidatePath("/register");
   revalidatePath("/predictions");
+  revalidatePath("/predictions/match");
+  revalidatePath("/predictions/fantasy");
   revalidatePath("/culture/writing");
   revalidatePath("/live");
 }

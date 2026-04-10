@@ -1,7 +1,22 @@
+const DEFAULT_FANTASY_PLAYER_COUNT = 11;
+
+function resolveFantasyPlayerCount() {
+  const raw = process.env.NEXT_PUBLIC_FANTASY_NUMBER;
+  const parsed = Number.parseInt(raw ?? "", 10);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return DEFAULT_FANTASY_PLAYER_COUNT;
+  }
+
+  return parsed;
+}
+
+const fantasyPlayerCount = resolveFantasyPlayerCount();
+
 export const MATCH_TEAM_CONFIG = {
-  minPlayers: 7,
-  maxPlayers: 18,
-  defaultPlayers: 11,
+  minPlayers: fantasyPlayerCount,
+  maxPlayers: fantasyPlayerCount,
+  defaultPlayers: fantasyPlayerCount,
   canvasHeight: 980,
   playerCardWidth: 132,
   playerCardHeight: 54,

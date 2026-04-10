@@ -89,7 +89,7 @@ function buildPlayers(count: number): PlayerNode[] {
 }
 
 export function PredictionTeamCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
   const dragIdRef = useRef<string | null>(null);
   const pitchPanelRef = useRef<HTMLDivElement | null>(null);
   const listPanelRef = useRef<HTMLDivElement | null>(null);
@@ -121,103 +121,6 @@ export function PredictionTeamCanvas() {
     });
   }, [playerCount]);
 
-  const draw = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      return;
-    }
-
-    const context = canvas.getContext("2d");
-    if (!context) {
-      return;
-    }
-
-    const ratio = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * ratio;
-    canvas.height = rect.height * ratio;
-    context.setTransform(ratio, 0, 0, ratio, 0, 0);
-
-    context.clearRect(0, 0, rect.width, rect.height);
-
-    const sx = rect.width / VIRTUAL_WIDTH;
-    const sy = rect.height / VIRTUAL_HEIGHT;
-
-    const toX = (x: number) => x * sx;
-    const toY = (y: number) => y * sy;
-
-    context.fillStyle = "#1f2f69";
-    context.fillRect(0, 0, rect.width, rect.height);
-
-    context.strokeStyle = "rgba(245, 252, 255, 0.9)";
-    context.lineWidth = 2;
-
-    const outer = {
-      x: 40,
-      y: 56,
-      w: rect.width - 80,
-      h: rect.height - 120,
-    };
-
-    context.strokeRect(outer.x, outer.y, outer.w, outer.h);
-
-    const boxW = outer.w * 0.42;
-    const boxH = outer.h * 0.22;
-    context.strokeRect(rect.width / 2 - boxW / 2, outer.y, boxW, boxH);
-
-    const smallBoxW = outer.w * 0.2;
-    const smallBoxH = outer.h * 0.12;
-    context.strokeRect(rect.width / 2 - smallBoxW / 2, outer.y, smallBoxW, smallBoxH);
-
-    const centerY = outer.y + outer.h;
-    context.beginPath();
-    context.moveTo(outer.x, centerY);
-    context.lineTo(outer.x + outer.w, centerY);
-    context.stroke();
-
-    context.beginPath();
-    context.arc(rect.width / 2, centerY, 95 * sx, 0, Math.PI * 2);
-    context.stroke();
-
-    const cardW = MATCH_TEAM_CONFIG.playerCardWidth * sx;
-    const cardH = MATCH_TEAM_CONFIG.playerCardHeight * sy;
-    const topH = cardH * 0.56;
-
-    players.forEach((player) => {
-      const x = toX(player.x) - cardW / 2;
-      const y = toY(player.y) - cardH / 2;
-
-      context.fillStyle = player.name ? "#84ec93" : "#f06db6";
-      context.fillRect(x, y, cardW, topH);
-
-      context.fillStyle = "#f0ef6e";
-      context.fillRect(x, y + topH, cardW, cardH - topH);
-
-      context.strokeStyle = "rgba(8, 31, 57, 0.18)";
-      context.strokeRect(x, y, cardW, cardH);
-
-      context.fillStyle = "#031d2d";
-      context.font = `700 ${Math.max(11, 16 * sy)}px var(--font-geist-sans, sans-serif)`;
-      context.textAlign = "center";
-      context.textBaseline = "middle";
-      context.fillText(player.name ?? "Select", x + cardW / 2, y + topH / 2);
-
-      context.font = `700 ${Math.max(10, 15 * sy)}px var(--font-geist-sans, sans-serif)`;
-      context.fillText(player.role, x + cardW / 2, y + topH + (cardH - topH) / 2);
-    });
-  }, [players]);
-
-  useEffect(() => {
-    if (view !== "pitch") {
-      return;
-    }
-
-    draw();
-    const resize = () => draw();
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
-  }, [draw, view]);
-
   useEffect(() => {
     const measure = () => {
       const pitchHeight = pitchPanelRef.current?.offsetHeight ?? 0;
@@ -230,14 +133,14 @@ export function PredictionTeamCanvas() {
     return () => window.removeEventListener("resize", measure);
   }, [view, players, playerCount]);
 
-  const getPoint = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
+  const getPoint = useCallback((event: React.PointerEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width) * VIRTUAL_WIDTH;
     const y = ((event.clientY - rect.top) / rect.height) * VIRTUAL_HEIGHT;
     return { x, y };
   }, []);
 
-  const onPointerDown = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
+  const onPointerDown = useCallback((event: React.PointerEvent<SVGSVGElement>) => {
     const { x, y } = getPoint(event);
     const halfW = MATCH_TEAM_CONFIG.playerCardWidth / 2;
     const halfH = MATCH_TEAM_CONFIG.playerCardHeight / 2;
@@ -257,7 +160,7 @@ export function PredictionTeamCanvas() {
     event.currentTarget.setPointerCapture(event.pointerId);
   }, [getPoint, players]);
 
-  const onPointerMove = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
+  const onPointerMove = useCallback((event: React.PointerEvent<SVGSVGElement>) => {
     const activeId = dragIdRef.current;
     if (!activeId) {
       return;
@@ -280,7 +183,7 @@ export function PredictionTeamCanvas() {
     }));
   }, [getPoint]);
 
-  const onPointerUp = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
+  const onPointerUp = useCallback((event: React.PointerEvent<SVGSVGElement>) => {
     if (!dragIdRef.current) {
       return;
     }
@@ -296,6 +199,20 @@ export function PredictionTeamCanvas() {
     () => `Players ${playerCount} (min ${MATCH_TEAM_CONFIG.minPlayers} - max ${MATCH_TEAM_CONFIG.maxPlayers})`,
     [playerCount]
   );
+  const outer = useMemo(() => ({
+    x: 40,
+    y: 56,
+    w: VIRTUAL_WIDTH - 80,
+    h: VIRTUAL_HEIGHT - 120,
+  }), []);
+  const boxW = outer.w * 0.42;
+  const boxH = outer.h * 0.22;
+  const smallBoxW = outer.w * 0.2;
+  const smallBoxH = outer.h * 0.12;
+  const centerY = outer.y + outer.h;
+  const cardW = MATCH_TEAM_CONFIG.playerCardWidth;
+  const cardH = MATCH_TEAM_CONFIG.playerCardHeight;
+  const topH = cardH * 0.56;
 
   return (
     <section id="team" className="space-y-8">
@@ -354,15 +271,58 @@ export function PredictionTeamCanvas() {
           aria-hidden={view !== "pitch"}
         >
           <div className="glass-card rounded-none border border-cyan-300/25 p-3 md:p-4">
-            <canvas
-              ref={canvasRef}
-              className="w-full touch-none bg-[#1f2f69]"
+            <svg
+              ref={svgRef}
+              viewBox={`0 0 ${VIRTUAL_WIDTH} ${VIRTUAL_HEIGHT}`}
+              preserveAspectRatio="none"
+              className="w-full touch-none bg-[#1f2f69] select-none"
               style={{ height: `${MATCH_TEAM_CONFIG.canvasHeight}px` }}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
               onPointerCancel={onPointerUp}
-            />
+            >
+              <rect x={0} y={0} width={VIRTUAL_WIDTH} height={VIRTUAL_HEIGHT} fill="#1f2f69" />
+              <rect x={outer.x} y={outer.y} width={outer.w} height={outer.h} fill="none" stroke="rgba(245,252,255,0.9)" strokeWidth={2} />
+              <rect x={VIRTUAL_WIDTH / 2 - boxW / 2} y={outer.y} width={boxW} height={boxH} fill="none" stroke="rgba(245,252,255,0.9)" strokeWidth={2} />
+              <rect x={VIRTUAL_WIDTH / 2 - smallBoxW / 2} y={outer.y} width={smallBoxW} height={smallBoxH} fill="none" stroke="rgba(245,252,255,0.9)" strokeWidth={2} />
+              <line x1={outer.x} y1={centerY} x2={outer.x + outer.w} y2={centerY} stroke="rgba(245,252,255,0.9)" strokeWidth={2} />
+              <circle cx={VIRTUAL_WIDTH / 2} cy={centerY} r={95} fill="none" stroke="rgba(245,252,255,0.9)" strokeWidth={2} />
+
+              {players.map((player) => {
+                const x = player.x - cardW / 2;
+                const y = player.y - cardH / 2;
+                return (
+                  <g key={player.id}>
+                    <rect x={x} y={y} width={cardW} height={topH} fill={player.name ? "#84ec93" : "#f06db6"} />
+                    <rect x={x} y={y + topH} width={cardW} height={cardH - topH} fill="#f0ef6e" />
+                    <rect x={x} y={y} width={cardW} height={cardH} fill="none" stroke="rgba(8,31,57,0.18)" />
+                    <text
+                      x={x + cardW / 2}
+                      y={y + topH / 2}
+                      fill="#031d2d"
+                      fontSize={16}
+                      fontWeight={700}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                    >
+                      {player.name ?? "Select"}
+                    </text>
+                    <text
+                      x={x + cardW / 2}
+                      y={y + topH + (cardH - topH) / 2}
+                      fill="#031d2d"
+                      fontSize={15}
+                      fontWeight={700}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                    >
+                      {player.role}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
           </div>
         </div>
 

@@ -1,21 +1,38 @@
 import { z } from "zod";
 
-const uuid = z.string().uuid();
+const trimInput = (value: unknown) => (typeof value === "string" ? value.trim() : value);
+const uuid = z.preprocess(trimInput, z.string().uuid());
 const datetimeString = z
-  .string()
-  .min(1)
+  .preprocess(trimInput, z.string().min(1))
   .refine((value) => !Number.isNaN(Date.parse(value)), "Invalid date and time value.");
 
+const emailString = z.preprocess(trimInput, z.string().email().max(254));
+
+const requiredText = (min: number, max: number, label: string) =>
+  z.preprocess(trimInput, z.string().min(min, `${label} is too short.`).max(max, `${label} is too long.`));
+
+const optionalText = (max: number) => z.preprocess(trimInput, z.string().max(max)).optional().or(z.literal(""));
+
+const phonePattern = /^\+?[0-9][0-9\s().-]{5,29}$/;
+const requiredPhone = z.preprocess(
+  trimInput,
+  z.string().min(6).max(30).regex(phonePattern, "Invalid phone number format.")
+);
+const optionalPhone = z
+  .preprocess(trimInput, z.string().max(30).regex(phonePattern, "Invalid phone number format."))
+  .optional()
+  .or(z.literal(""));
+
 export const registrationSchema = z.object({
-  full_name: z.string().min(2).max(120),
-  email: z.email(),
-  phone: z.string().min(6).max(30),
-  department_or_school: z.string().min(2).max(120),
+  full_name: requiredText(2, 120, "Full name"),
+  email: emailString,
+  phone: requiredPhone,
+  department_or_school: requiredText(2, 120, "School / department"),
   category_type: z.enum(["collective_sport", "individual_sport", "culture"]),
   event_id: uuid,
-  team_name: z.string().max(120).optional().or(z.literal("")),
-  additional_notes: z.string().max(800).optional().or(z.literal("")),
-  emergency_contact: z.string().max(120).optional().or(z.literal("")),
+  team_name: optionalText(120),
+  additional_notes: optionalText(800),
+  emergency_contact: optionalText(120),
 });
 
 export const registrationBatchSchema = registrationSchema.extend({
@@ -23,45 +40,43 @@ export const registrationBatchSchema = registrationSchema.extend({
 });
 
 export const activityRegistrationSchema = registrationSchema.extend({
-  activity_slug: z
-    .string()
-    .min(2)
-    .max(80)
-    .regex(/^[a-z0-9-]+$/),
-  previous_experience: z.string().min(8).max(1000),
-  motivation: z.string().min(20).max(1200),
+  activity_slug: z.preprocess(
+    trimInput,
+    z.string().min(2).max(80).regex(/^[a-z0-9-]+$/)
+  ),
+  previous_experience: requiredText(2, 2000, "Previous experience"),
+  motivation: requiredText(4, 2500, "Motivation"),
   availability_date: z
-    .string()
+    .preprocess(trimInput, z.string())
     .optional()
     .or(z.literal(""))
     .refine((value) => !value || !Number.isNaN(Date.parse(value)), "Invalid availability date."),
-  preferred_role: z.string().max(120).optional().or(z.literal("")),
+  preferred_role: optionalText(120),
   registration_details: z.record(z.string(), z.string()).optional(),
 });
 
 export const eventSchema = z
   .object({
-    title: z.string().min(2).max(160),
-    slug: z
-      .string()
-      .min(2)
-      .max(160)
-      .regex(/^[a-z0-9-]+$/),
+    title: requiredText(2, 160, "Title"),
+    slug: z.preprocess(
+      trimInput,
+      z.string().min(2).max(160).regex(/^[a-z0-9-]+$/)
+    ),
     type: z.enum(["sport", "culture", "ceremony", "mini_game"]),
-    category: z.string().min(2).max(120),
-    venue: z.string().min(2).max(160),
+    category: requiredText(2, 120, "Category"),
+    venue: requiredText(2, 160, "Venue"),
     starts_at: datetimeString,
     ends_at: datetimeString,
     status: z.enum(["draft", "scheduled", "live", "completed", "cancelled"]),
-    description: z.string().max(1200).optional().or(z.literal("")),
+    description: optionalText(1200),
     sport_id: uuid.optional().or(z.literal("")),
     registration_deadline: datetimeString.optional().or(z.literal("")),
     max_participants: z.coerce.number().int().positive().optional(),
     is_registration_open: z.boolean().optional(),
     is_featured: z.boolean().optional(),
     visibility: z.enum(["public", "private"]).optional(),
-    current_round: z.string().max(120).optional().or(z.literal("")),
-    icon_key: z.string().max(64).optional().or(z.literal("")),
+    current_round: optionalText(120),
+    icon_key: optionalText(64),
   })
   .refine((value) => Date.parse(value.ends_at) >= Date.parse(value.starts_at), {
     message: "Event end date must be after start date.",
@@ -70,45 +85,45 @@ export const eventSchema = z
 
 export const matchSchema = z.object({
   event_id: uuid,
-  sport: z.string().min(2).max(120),
-  team_a: z.string().min(1).max(120),
-  team_b: z.string().min(1).max(120),
+  sport: requiredText(2, 120, "Sport"),
+  team_a: requiredText(1, 120, "Team A"),
+  team_b: requiredText(1, 120, "Team B"),
   score_a: z.coerce.number().int().min(0),
   score_b: z.coerce.number().int().min(0),
   status: z.enum(["scheduled", "live", "completed"]),
-  round: z.string().min(1).max(120),
-  venue: z.string().min(2).max(160),
+  round: requiredText(1, 120, "Round"),
+  venue: requiredText(2, 160, "Venue"),
   starts_at: datetimeString,
   team_a_id: uuid.optional().or(z.literal("")),
   team_b_id: uuid.optional().or(z.literal("")),
-  event_phase: z.string().max(80).optional().or(z.literal("")),
-  mvp_player: z.string().max(120).optional().or(z.literal("")),
+  event_phase: optionalText(80),
+  mvp_player: optionalText(120),
   live_minute: z.coerce.number().int().min(0).optional(),
   is_prediction_locked: z.boolean().optional(),
-  notes: z.string().max(600).optional().or(z.literal("")),
+  notes: optionalText(600),
 });
 
 export const resultSchema = z.object({
   event_id: uuid,
-  participant_or_team_name: z.string().min(1).max(160),
+  participant_or_team_name: requiredText(1, 160, "Participant / team name"),
   placement: z.coerce.number().int().min(1),
   medal: z.enum(["gold", "silver", "bronze", "none"]),
-  score_summary: z.string().max(240).optional().or(z.literal("")),
+  score_summary: optionalText(240),
 });
 
 export const predictionSchema = z.object({
   match_id: uuid,
-  predicted_winner: z.string().min(1).max(120),
+  predicted_winner: requiredText(1, 120, "Predicted winner"),
   predicted_score_a: z.coerce.number().int().min(0).default(0),
   predicted_score_b: z.coerce.number().int().min(0).default(0),
-  predicted_mvp_player: z.string().max(120).optional().or(z.literal("")),
+  predicted_mvp_player: optionalText(120),
   stake_points: z.coerce.number().int().min(1).max(10).default(1),
 });
 
 export const writingSubmissionSchema = z.object({
-  title: z.string().min(3).max(180),
-  content: z.string().min(30).max(10000),
-  category: z.string().min(2).max(80),
+  title: requiredText(3, 180, "Title"),
+  content: requiredText(30, 10000, "Content"),
+  category: requiredText(2, 80, "Category"),
 });
 
 export const appSettingSchema = z.object({
@@ -123,59 +138,63 @@ export const appSettingSchema = z.object({
 });
 
 export const profileCompletionSchema = z.object({
-  full_name: z.string().min(2).max(120),
-  school: z.enum(["ENSIA", "NHSM", "NHCS", "Others"]),
-  year_of_study: z.enum(["1", "2", "3", "4", "5", "other"]),
+  full_name: requiredText(2, 120, "Full name"),
+  school: z.preprocess(trimInput, z.enum(["ENSIA", "NHSM", "NHCS", "Others"])),
+  year_of_study: z.preprocess(trimInput, z.enum(["1", "2", "3", "4", "5", "other"])),
+  student_id: z.preprocess(
+    trimInput,
+    z.string().regex(/^\d{12}$/, "Student ID must be exactly 12 digits.")
+  ),
 });
 
 export const profileUpdateSchema = profileCompletionSchema.extend({
-  username: z
-    .string()
-    .regex(/^[a-zA-Z0-9_]{3,32}$/)
+  username: z.preprocess(
+    trimInput,
+    z.string().regex(/^[a-zA-Z0-9_]{3,32}$/)
+  )
     .optional()
     .or(z.literal("")),
-  phone: z.string().max(30).optional().or(z.literal("")),
-  bio: z.string().max(400).optional().or(z.literal("")),
-  timezone: z.string().max(80).optional().or(z.literal("")),
+  phone: optionalPhone,
+  bio: optionalText(400),
+  timezone: optionalText(80),
 });
 
 export const sportSchema = z.object({
-  name: z.string().min(2).max(120),
-  slug: z
-    .string()
-    .min(2)
-    .max(120)
-    .regex(/^[a-z0-9-]+$/),
+  name: requiredText(2, 120, "Sport name"),
+  slug: z.preprocess(
+    trimInput,
+    z.string().min(2).max(120).regex(/^[a-z0-9-]+$/)
+  ),
   sport_type: z.enum(["collective", "individual", "culture"]),
   is_team_based: z.boolean().optional(),
-  gender_division: z.string().max(40).optional().or(z.literal("")),
-  description: z.string().max(600).optional().or(z.literal("")),
+  gender_division: optionalText(40),
+  description: optionalText(600),
   is_active: z.boolean().optional(),
 });
 
 export const teamSchema = z.object({
   sport_id: uuid,
-  name: z.string().min(2).max(120),
-  short_code: z.string().max(10).optional().or(z.literal("")),
-  city: z.string().max(120).optional().or(z.literal("")),
-  coach_name: z.string().max(120).optional().or(z.literal("")),
+  name: requiredText(2, 120, "Team name"),
+  short_code: optionalText(10),
+  city: optionalText(120),
+  coach_name: optionalText(120),
 });
 
 export const teamMembershipSchema = z.object({
   team_id: uuid,
   profile_id: uuid,
-  role: z.string().min(2).max(80),
+  role: requiredText(2, 80, "Role"),
   registration_id: uuid.optional().or(z.literal("")),
 });
 
 export const tournamentSchema = z.object({
-  name: z.string().min(3).max(160),
+  name: requiredText(3, 160, "Tournament name"),
   sport_id: uuid.optional().or(z.literal("")),
   event_id: uuid.optional().or(z.literal("")),
   format: z.enum(["knockout", "group", "league", "hybrid"]),
   status: z.enum(["draft", "scheduled", "live", "completed", "cancelled"]),
   starts_at: datetimeString.optional().or(z.literal("")),
-  notes: z.string().max(800).optional().or(z.literal("")),
+  notes: optionalText(800),
 });
 
 export const tournamentAssignmentSchema = z.object({
@@ -185,13 +204,14 @@ export const tournamentAssignmentSchema = z.object({
 
 export const profileAdminUpdateSchema = z.object({
   profile_id: uuid,
-  full_name: z.string().min(2).max(120),
-  school: z.string().max(120).optional().or(z.literal("")),
-  year_of_study: z.string().max(20).optional().or(z.literal("")),
-  phone: z.string().max(30).optional().or(z.literal("")),
-  username: z
-    .string()
-    .regex(/^[a-zA-Z0-9_]{3,32}$/)
+  full_name: requiredText(2, 120, "Full name"),
+  school: optionalText(120),
+  year_of_study: optionalText(20),
+  phone: optionalPhone,
+  username: z.preprocess(
+    trimInput,
+    z.string().regex(/^[a-zA-Z0-9_]{3,32}$/)
+  )
     .optional()
     .or(z.literal("")),
   avatar_url: z.url().optional().or(z.literal("")),
@@ -199,8 +219,8 @@ export const profileAdminUpdateSchema = z.object({
 });
 
 export const liveStreamSchema = z.object({
-  title: z.string().min(3).max(160),
-  description: z.string().max(800).optional().or(z.literal("")),
+  title: requiredText(3, 160, "Title"),
+  description: optionalText(800),
   event_id: uuid.optional().or(z.literal("")),
   playback_url: z.url().optional().or(z.literal("")),
   status: z.enum(["draft", "live", "ended"]),
