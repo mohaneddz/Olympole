@@ -55,10 +55,9 @@ export default async function ProfilePage() {
       return null;
     }
 
-    const event = Array.isArray(registration.events) ? registration.events[0] : registration.events;
     return {
       id: registration.id,
-      title: event?.title ?? "Unknown event",
+      title: registration.event_title ?? "Unknown event",
       statusLabel: registration.status === "approved" ? "Accepted" : "Pending",
       activityType: registration.category_type,
     };
