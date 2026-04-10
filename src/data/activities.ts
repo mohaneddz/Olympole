@@ -41,8 +41,8 @@ export const ACTIVITY_COLUMNS: ActivityColumn[] = [
     text: "text-[#181717]",
     button: "border-[#46412b] text-[#1d1b12] hover:bg-[#46412b] hover:text-[#ecec65]",
     items: [
-      { name: "Swimming", href: "/register/swimming" },
-      { name: "Tennis", href: "/register/tennis" },
+      // { name: "Swimming", href: "/register/swimming" },
+      // { name: "Tennis", href: "/register/tennis" },
       { name: "Chess", href: "/register/chess" },
       { name: "Running", href: "/register/running" },
     ],

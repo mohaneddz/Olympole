@@ -2,7 +2,7 @@ import { CalendarDays, Trophy, UsersRound } from "lucide-react";
 
 export const EVENT_STATS = [
   {
-    title: "6th April",
+    title: "16th April",
     subtitle: "1 month duration",
     icon: CalendarDays,
   },

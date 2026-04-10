@@ -70,11 +70,18 @@ export async function syncAdminRole(user: User) {
   const supabase = createSupabaseAdminClient();
   const email = user.email?.toLowerCase() ?? "";
   const isAdmin = getAdminEmails().includes(email);
+  const metadata = user.user_metadata ?? {};
+  const metadataUsername = typeof metadata.username === "string" ? metadata.username.trim() : "";
+  const metadataPhone = typeof metadata.phone === "string" ? metadata.phone.trim() : "";
+  const metadataBio = typeof metadata.bio === "string" ? metadata.bio.trim() : "";
 
   const { error: profileError } = await supabase.from("profiles").upsert({
     id: user.id,
     email: email || `${user.id}@unknown.local`,
     full_name: user.user_metadata?.full_name ?? null,
+    ...(metadataUsername ? { username: metadataUsername } : {}),
+    ...(metadataPhone ? { phone: metadataPhone } : {}),
+    ...(metadataBio ? { bio: metadataBio } : {}),
     role: isAdmin ? "admin" : "participant",
     last_seen_at: new Date().toISOString(),
   });
@@ -108,7 +115,7 @@ export async function getProfileCompletionStatus(userId: string) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("full_name, school, year_of_study")
+    .select("full_name, school, year_of_study, student_id")
     .eq("id", userId)
     .single();
 
@@ -122,7 +129,8 @@ export async function getProfileCompletionStatus(userId: string) {
   const hasName = Boolean(data?.full_name?.trim());
   const hasSchool = Boolean(data?.school?.trim());
   const hasYear = Boolean(data?.year_of_study?.trim());
-  return { ready: hasName && hasSchool && hasYear };
+  const hasStudentId = Boolean(data?.student_id?.trim());
+  return { ready: hasName && hasSchool && hasYear && hasStudentId };
 }
 
 export async function requireAuth() {
