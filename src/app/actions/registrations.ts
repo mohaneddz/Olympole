@@ -26,6 +26,73 @@ function sanitizeDetailsFromFormData(formData: FormData) {
   return details;
 }
 
+function validateActivitySpecificDetails(
+  activitySlug: string,
+  categoryType: "collective_sport" | "individual_sport" | "culture",
+  details: Record<string, string>,
+  preferredRole: string
+) {
+  if (categoryType === "collective_sport") {
+    const gender = (details.gender ?? "").toLowerCase();
+    if (!gender) {
+      return "Please select a gender category for this team sport.";
+    }
+    if (activitySlug === "football" && gender !== "men") {
+      return "Football registrations are currently limited to men's category.";
+    }
+  }
+
+  if (activitySlug === "swimming" && !details.race_category) {
+    return "Please choose a swimming race category.";
+  }
+
+  if (activitySlug === "talent-show") {
+    if (!details.talent_type) {
+      return "Please select your talent type.";
+    }
+    if (!details.performance_description) {
+      return "Please provide a short performance description.";
+    }
+  }
+
+  if (activitySlug === "art-exhibition" && !details.art_category) {
+    return "Please choose an art category.";
+  }
+
+  if (activitySlug === "football") {
+    const normalizedRole = preferredRole.trim().toLowerCase();
+    const allowedRoles = new Set(["field player", "goal keeper"]);
+    if (!allowedRoles.has(normalizedRole)) {
+      return "Preferred role must be one of: Field Player, Goal Keeper.";
+    }
+  }
+
+  return null;
+}
+
+function parseActivityRegistrationPayload(formData: FormData) {
+  const details = sanitizeDetailsFromFormData(formData);
+  const parsed = activityRegistrationSchema.safeParse({
+    full_name: formData.get("full_name"),
+    email: formData.get("email"),
+    phone: formData.get("phone"),
+    department_or_school: formData.get("department_or_school"),
+    category_type: formData.get("category_type"),
+    event_id: formData.get("event_id"),
+    team_name: formData.get("team_name"),
+    additional_notes: formData.get("additional_notes"),
+    emergency_contact: formData.get("emergency_contact"),
+    activity_slug: formData.get("activity_slug"),
+    previous_experience: formData.get("previous_experience"),
+    motivation: formData.get("motivation"),
+    availability_date: formData.get("availability_date"),
+    preferred_role: formData.get("preferred_role"),
+    registration_details: details,
+  });
+
+  return { parsed, details };
+}
+
 async function assertRegistrationLimit(userId: string, requestedEventCount: number) {
   const supabase = await createSupabaseServerClient();
   const settings = await getAppSettings();
@@ -158,31 +225,24 @@ export async function createActivityRegistrationAction(
   const user = await requireAuth();
   const profile = await getCurrentProfile();
 
-  if (!profile?.full_name || !profile?.school || !profile?.year_of_study) {
+  if (!profile?.full_name || !profile?.school || !profile?.year_of_study || !profile?.student_id) {
     return failure("Please complete your profile first before registering to activities.");
   }
 
-  const details = sanitizeDetailsFromFormData(formData);
-  const parsed = activityRegistrationSchema.safeParse({
-    full_name: formData.get("full_name"),
-    email: formData.get("email"),
-    phone: formData.get("phone"),
-    department_or_school: formData.get("department_or_school"),
-    category_type: formData.get("category_type"),
-    event_id: formData.get("event_id"),
-    team_name: formData.get("team_name"),
-    additional_notes: formData.get("additional_notes"),
-    emergency_contact: formData.get("emergency_contact"),
-    activity_slug: formData.get("activity_slug"),
-    previous_experience: formData.get("previous_experience"),
-    motivation: formData.get("motivation"),
-    availability_date: formData.get("availability_date"),
-    preferred_role: formData.get("preferred_role"),
-    registration_details: details,
-  });
+  const { parsed, details } = parseActivityRegistrationPayload(formData);
 
   if (!parsed.success) {
     return failure(parsed.error.issues[0]?.message ?? "Invalid activity registration payload.");
+  }
+
+  const detailsValidationError = validateActivitySpecificDetails(
+    parsed.data.activity_slug,
+    parsed.data.category_type,
+    parsed.data.registration_details ?? details,
+    parsed.data.preferred_role ?? ""
+  );
+  if (detailsValidationError) {
+    return failure(detailsValidationError);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -261,6 +321,158 @@ export async function createActivityRegistrationAction(
   revalidatePath("/profile");
   revalidatePath("/admin/registrations");
   return success("Registration submitted and saved successfully.");
+}
+
+export async function updateActivityRegistrationAction(
+  _: ActionResponse,
+  formData: FormData
+): Promise<ActionResponse> {
+  const user = await requireAuth();
+  const registrationId = String(formData.get("registration_id") ?? "");
+  if (!registrationId) {
+    return failure("Missing registration id.");
+  }
+
+  const { parsed, details } = parseActivityRegistrationPayload(formData);
+  if (!parsed.success) {
+    return failure(parsed.error.issues[0]?.message ?? "Invalid activity registration payload.");
+  }
+
+  const detailsValidationError = validateActivitySpecificDetails(
+    parsed.data.activity_slug,
+    parsed.data.category_type,
+    parsed.data.registration_details ?? details,
+    parsed.data.preferred_role ?? ""
+  );
+  if (detailsValidationError) {
+    return failure(detailsValidationError);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: existing, error: existingError } = await supabase
+    .from("registrations")
+    .select("id, event_id, activity_slug, status")
+    .eq("id", registrationId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (existingError || !existing) {
+    return failure(existingError?.message ?? "Registration not found.");
+  }
+
+  if (existing.activity_slug !== parsed.data.activity_slug) {
+    return failure("The selected registration does not match this activity.");
+  }
+
+  if (existing.status === "approved") {
+    return failure("Approved registrations cannot be edited.");
+  }
+
+  if (parsed.data.event_id !== existing.event_id) {
+    const { data: duplicateRows } = await supabase
+      .from("registrations")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("event_id", parsed.data.event_id)
+      .neq("id", existing.id)
+      .limit(1);
+
+    if ((duplicateRows?.length ?? 0) > 0) {
+      return failure("You are already registered for the selected event.");
+    }
+
+    const { data: event, error: eventError } = await supabase
+      .from("events")
+      .select("id, status, is_registration_open, max_participants, sports(slug)")
+      .eq("id", parsed.data.event_id)
+      .single();
+
+    if (eventError || !event) {
+      return failure(eventError?.message ?? "Event is unavailable.");
+    }
+
+    const linkedSport = Array.isArray(event.sports) ? event.sports[0] : event.sports;
+    if (linkedSport?.slug !== parsed.data.activity_slug) {
+      return failure("The selected event does not match the requested activity.");
+    }
+
+    if (!event.is_registration_open || !["scheduled", "live"].includes(event.status)) {
+      return failure("This activity is closed for registration right now.");
+    }
+
+    if (event.max_participants) {
+      const { count } = await supabase
+        .from("registrations")
+        .select("id", { count: "exact", head: true })
+        .eq("event_id", event.id);
+
+      if ((count ?? 0) >= event.max_participants) {
+        return failure("This activity has reached maximum participants.");
+      }
+    }
+  }
+
+  const { error } = await supabase
+    .from("registrations")
+    .update({
+      full_name: parsed.data.full_name,
+      email: parsed.data.email,
+      phone: parsed.data.phone,
+      department_or_school: parsed.data.department_or_school,
+      category_type: parsed.data.category_type,
+      event_id: parsed.data.event_id,
+      team_name: parsed.data.team_name || null,
+      additional_notes: parsed.data.additional_notes || null,
+      emergency_contact: parsed.data.emergency_contact || null,
+      activity_slug: parsed.data.activity_slug,
+      previous_experience: parsed.data.previous_experience,
+      motivation: parsed.data.motivation,
+      availability_date: parsed.data.availability_date || null,
+      preferred_role: parsed.data.preferred_role || null,
+      registration_details: parsed.data.registration_details ?? details,
+      status: "pending",
+      attendance_status: "pending",
+    })
+    .eq("id", registrationId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return failure(error.message);
+  }
+
+  revalidatePath(`/register/${parsed.data.activity_slug}`);
+  revalidatePath("/register");
+  revalidatePath("/profile");
+  revalidatePath("/admin/registrations");
+  return success("Registration updated successfully.");
+}
+
+export async function deleteActivityRegistrationAction(formData: FormData): Promise<void> {
+  const user = await requireAuth();
+  const registrationId = String(formData.get("registration_id") ?? "");
+  const activitySlug = String(formData.get("activity_slug") ?? "");
+  if (!registrationId || !activitySlug) {
+    return;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: existing } = await supabase
+    .from("registrations")
+    .select("id, activity_slug, status")
+    .eq("id", registrationId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!existing || existing.activity_slug !== activitySlug || existing.status === "approved") {
+    return;
+  }
+
+  await supabase.from("registrations").delete().eq("id", registrationId).eq("user_id", user.id);
+
+  revalidatePath(`/register/${activitySlug}`);
+  revalidatePath("/register");
+  revalidatePath("/profile");
+  revalidatePath("/admin/registrations");
 }
 
 export async function updateRegistrationStatusAction(formData: FormData): Promise<void> {

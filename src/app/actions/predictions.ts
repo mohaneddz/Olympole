@@ -56,6 +56,7 @@ export async function submitPredictionAction(_: ActionResponse, formData: FormDa
   }
 
   revalidatePath("/predictions");
+  revalidatePath("/predictions/match");
   revalidatePath("/profile");
   return success("Prediction submitted successfully.");
 }

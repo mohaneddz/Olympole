@@ -4,10 +4,11 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { failure, success, type ActionResponse } from "@/lib/actions";
 import { getProfileCompletionStatus, syncAdminRole } from "@/lib/auth";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const loginSchema = z.object({
-  email: z.email(),
+  email: z.preprocess((value) => (typeof value === "string" ? value.trim() : value), z.string().email().max(254)),
   password: z.string().min(6),
 });
 
@@ -17,15 +18,29 @@ const signupSchema = loginSchema.extend({
     .string()
     .regex(/^[a-zA-Z0-9_]{3,32}$/)
     .optional(),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters long.")
-    .max(120)
-    .refine(
-      (value) => /[a-z]/.test(value) && /[A-Z]/.test(value) && /\d/.test(value),
-      "Password must include uppercase, lowercase, and a number."
-    ),
+  phone: z.preprocess(
+    (value) => (typeof value === "string" ? value.trim() : value),
+    z.string().min(6).max(30).regex(/^\+?[0-9][0-9\s().-]{5,29}$/, "Invalid phone number format.")
+  ),
+  bio: z.string().max(400).optional(),
+  password: z.string().min(6, "Password must be at least 6 characters long.").max(120),
 });
+
+async function redirectAfterAuth(userId: string) {
+  const completion = await getProfileCompletionStatus(userId);
+  if (!completion.ready) {
+    redirect("/onboarding");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: roles } = await supabase
+    .from("profile_roles")
+    .select("role_name")
+    .eq("profile_id", userId);
+
+  const isAdmin = (roles ?? []).some((row) => row.role_name === "admin");
+  redirect(isAdmin ? "/admin" : "/profile");
+}
 
 export async function signInAction(_: ActionResponse, formData: FormData): Promise<ActionResponse> {
   const parsed = loginSchema.safeParse({
@@ -49,24 +64,16 @@ export async function signInAction(_: ActionResponse, formData: FormData): Promi
     return failure("Signed in, but database migrations are missing. Ask an admin to run Supabase migrations.");
   }
 
-  const completion = await getProfileCompletionStatus(data.user.id);
-  if (!completion.ready) {
-    redirect("/onboarding");
-  }
-
-  const { data: roles } = await supabase
-    .from("profile_roles")
-    .select("role_name")
-    .eq("profile_id", data.user.id);
-
-  const isAdmin = (roles ?? []).some((row) => row.role_name === "admin");
-  redirect(isAdmin ? "/admin" : "/profile");
+  await redirectAfterAuth(data.user.id);
+  return { ok: true, message: "" };
 }
 
 export async function signUpAction(_: ActionResponse, formData: FormData): Promise<ActionResponse> {
   const parsed = signupSchema.safeParse({
     full_name: formData.get("full_name") || undefined,
     username: formData.get("username") || undefined,
+    phone: formData.get("phone"),
+    bio: formData.get("bio") || undefined,
     email: formData.get("email"),
     password: formData.get("password"),
   });
@@ -75,30 +82,45 @@ export async function signUpAction(_: ActionResponse, formData: FormData): Promi
     return failure(parsed.error.issues[0]?.message ?? "Invalid sign-up payload.");
   }
 
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.signUp({
+  const admin = createSupabaseAdminClient();
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
     email: parsed.data.email,
     password: parsed.data.password,
-    options: {
-      data: {
-        full_name: parsed.data.full_name ?? null,
-        username: parsed.data.username ?? null,
-      },
+    email_confirm: true,
+    user_metadata: {
+      full_name: parsed.data.full_name ?? null,
+      username: parsed.data.username ?? null,
+      phone: parsed.data.phone,
+      bio: parsed.data.bio ?? null,
     },
   });
 
-  if (error) {
-    return failure(error.message);
+  if (createError) {
+    return failure(createError.message);
   }
 
-  if (data.user) {
-    const syncResult = await syncAdminRole(data.user);
-    if (!syncResult.synced) {
-      return success("Account created, but profile tables are not migrated yet. Run Supabase migrations before admin features.");
-    }
+  if (!created.user) {
+    return failure("Account was created, but no user was returned. Try signing in.");
   }
 
-  return success("Account created. You can now sign in.");
+  const syncResult = await syncAdminRole(created.user);
+  if (!syncResult.synced) {
+    return success("Account created, but profile tables are not migrated yet. Run Supabase migrations before admin features.");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const signInResult = await supabase.auth.signInWithPassword({
+    email: parsed.data.email,
+    password: parsed.data.password,
+  });
+
+  if (signInResult.error || !signInResult.data.user) {
+    return success("Account created. Check your email to verify your account, then sign in.");
+  }
+
+  await syncAdminRole(signInResult.data.user);
+  await redirectAfterAuth(signInResult.data.user.id);
+  return { ok: true, message: "" };
 }
 
 export async function signOutAction() {
