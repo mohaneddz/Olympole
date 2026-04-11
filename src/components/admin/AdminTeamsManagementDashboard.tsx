@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { syncTeamMembersAction } from "@/app/actions/admin-management";
-import { createTeamAction, deleteTeamAction, updateTeamAction } from "@/app/actions/events";
+import { syncTeamMembersAction } from "@/server/team-memberships";
+import { createTeamAction, deleteTeamAction, updateTeamAction } from "@/server/teams";
 import { AdminDataTable } from "@/components/admin/AdminDataTable";
 import { Pencil, Plus, Trash2, Users, X } from "lucide-react";
 

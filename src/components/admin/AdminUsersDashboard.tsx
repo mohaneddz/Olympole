@@ -4,7 +4,7 @@ import { useState } from "react";
 import {
   deleteUserAdminAction,
   updateUserProfileAdminAction,
-} from "@/app/actions/admin-management";
+} from "@/server/profiles";
 import { AdminDataTable } from "@/components/admin/AdminDataTable";
 import { Pencil, Trash2, X } from "lucide-react";
 

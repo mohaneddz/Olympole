@@ -1,6 +1,6 @@
 "use client";
 
-import { createLiveStreamAction, updateLiveStreamDetailsAction } from "@/app/actions/events";
+import { createLiveStreamAction, updateLiveStreamDetailsAction } from "@/server/live-streams";
 import { Edit2, PlusCircle, X } from "lucide-react";
 import { useRef, useState } from "react";
 

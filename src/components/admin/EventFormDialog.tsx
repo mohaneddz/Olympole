@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { createEventAction, updateEventAction } from "@/app/actions/events";
+import { createEventAction, updateEventAction } from "@/server/events";
 import type { ActionResponse } from "@/lib/actions";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";

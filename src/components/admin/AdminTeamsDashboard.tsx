@@ -1,6 +1,6 @@
 "use client";
 
-import { deleteTeamAction } from "@/app/actions/events";
+import { deleteTeamAction } from "@/server/teams";
 import { AdminDataTable } from "@/components/admin/AdminDataTable";
 
 type SportOption = {

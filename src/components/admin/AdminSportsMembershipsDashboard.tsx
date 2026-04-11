@@ -3,7 +3,7 @@
 import {
   assignProfileToTeamAction,
   removeTeamMembershipAction,
-} from "@/app/actions/admin-management";
+} from "@/server/team-memberships";
 import { AdminDataTable } from "@/components/admin/AdminDataTable";
 
 type TeamRow = {

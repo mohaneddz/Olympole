@@ -6,7 +6,7 @@ import {
   deleteTournamentAction,
   randomDistributeTournamentTeamsAction,
   removeTournamentTeamAction,
-} from "@/app/actions/admin-management";
+} from "@/server/tournaments";
 import { AdminDataTable } from "@/components/admin/AdminDataTable";
 
 type SportRow = {
