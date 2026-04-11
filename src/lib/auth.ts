@@ -91,7 +91,6 @@ export async function syncAdminRole(user: User) {
   const metadataGender = typeof metadata.gender === "string" ? metadata.gender.trim() : "";
   const metadataSchool = typeof metadata.school === "string" ? metadata.school.trim() : "";
   const metadataYear = typeof metadata.year_of_study === "string" ? metadata.year_of_study.trim() : "";
-  const metadataStudentId = typeof metadata.student_id === "string" ? metadata.student_id.trim() : "";
 
   const { error: profileError } = await supabase.from("profiles").upsert({
     id: user.id,
@@ -102,7 +101,6 @@ export async function syncAdminRole(user: User) {
     ...(metadataGender ? { gender: metadataGender } : {}),
     ...(metadataSchool ? { school: metadataSchool } : {}),
     ...(metadataYear ? { year_of_study: metadataYear } : {}),
-    ...(metadataStudentId ? { student_id: metadataStudentId } : {}),
     role: isAdmin ? "admin" : "participant",
     last_seen_at: new Date().toISOString(),
   });
@@ -136,7 +134,7 @@ export async function getProfileCompletionStatus(userId: string) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("full_name, school, year_of_study, gender, student_id")
+    .select("full_name, school, year_of_study, gender")
     .eq("id", userId)
     .single();
 
@@ -151,8 +149,7 @@ export async function getProfileCompletionStatus(userId: string) {
   const hasSchool = Boolean(data?.school?.trim());
   const hasYear = Boolean(data?.year_of_study?.trim());
   const hasGender = Boolean(data?.gender?.trim());
-  const hasStudentId = Boolean(data?.student_id?.trim());
-  return { ready: hasName && hasSchool && hasYear && hasGender && hasStudentId };
+  return { ready: hasName && hasSchool && hasYear && hasGender };
 }
 
 export async function requireAuth() {

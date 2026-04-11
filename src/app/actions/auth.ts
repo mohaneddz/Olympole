@@ -21,10 +21,6 @@ const signupSchema = loginSchema.extend({
   gender: z.preprocess(trimString, z.enum(["male", "female"])),
   school: z.preprocess(trimString, z.enum(["ENSIA", "NHSM", "NSNN", "ENSSA", "ENSCS", "ESI", "Others"])),
   year_of_study: z.preprocess(trimString, z.enum(["1", "2", "3", "4", "5", "other"])),
-  student_id: z.preprocess(
-    trimString,
-    z.string().regex(/^\d{12}$/, "Student ID must be exactly 12 digits.")
-  ),
   phone: z.preprocess(
     normalizePhoneInput,
     z.string().regex(phonePattern, "Phone number must be exactly 10 digits and start with 0.")
@@ -87,7 +83,6 @@ export async function signUpAction(_: ActionResponse, formData: FormData): Promi
     gender: formData.get("gender"),
     school: formData.get("school"),
     year_of_study: formData.get("year_of_study"),
-    student_id: formData.get("student_id"),
     phone: formData.get("phone"),
     email: formData.get("email"),
     password: formData.get("password"),
@@ -107,7 +102,6 @@ export async function signUpAction(_: ActionResponse, formData: FormData): Promi
       gender: parsed.data.gender,
       school: parsed.data.school,
       year_of_study: parsed.data.year_of_study,
-      student_id: parsed.data.student_id,
       phone: parsed.data.phone,
     },
   });
