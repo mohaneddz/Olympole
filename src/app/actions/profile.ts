@@ -244,7 +244,6 @@ export async function updateProfileAction(_: ActionResponse, formData: FormData)
     year_of_study: formData.get("year_of_study"),
     username: formData.get("username"),
     phone: formData.get("phone"),
-    bio: formData.get("bio"),
     timezone: formData.get("timezone"),
   });
 
@@ -296,7 +295,6 @@ export async function updateProfileAction(_: ActionResponse, formData: FormData)
       year_of_study: parsed.data.year_of_study,
       username: parsed.data.username || null,
       phone: parsed.data.phone || null,
-      bio: parsed.data.bio || null,
       timezone: parsed.data.timezone || "Africa/Algiers",
       avatar_url: nextAvatarUrl,
     })

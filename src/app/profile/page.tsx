@@ -58,6 +58,7 @@ export default async function ProfilePage() {
     return {
       id: registration.id,
       title: registration.activity_title || registration.activity_slug || "Unknown activity",
+      activitySlug: registration.activity_slug,
       statusLabel: registration.status === "approved" ? "Accepted" : "Pending",
       activityType: registration.category_type,
     };
@@ -69,7 +70,7 @@ export default async function ProfilePage() {
         <ProfileHeaderCard
           displayName={displayName}
           displayEmail={displayEmail}
-          schoolLabel={`${profile?.school ?? "School"} - ${school}`}
+          schoolLabel={profile?.school === school ? school : `${profile?.school ?? "School"} - ${school}`}
           timezone={timezone}
           yearLabel={yearLabel}
           avatarUrl={profile?.avatar_url ?? null}
@@ -90,7 +91,6 @@ export default async function ProfilePage() {
                 student_id: profile?.student_id ?? null,
                 username: profile?.username ?? null,
                 phone: profile?.phone ?? null,
-                bio: profile?.bio ?? null,
                 timezone: profile?.timezone ?? null,
               }}
             />

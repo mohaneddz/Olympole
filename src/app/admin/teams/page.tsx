@@ -1,6 +1,6 @@
 import { Shield } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
-import { AdminTeamsManagementDashboard } from "@/components/admin/AdminTeamsManagementDashboard";
+import { AdminTeamsManagementDashboard, CreateTeamButton } from "@/components/admin/AdminTeamsManagementDashboard";
 import { ACTIVITY_COLUMNS } from "@/data/activities";
 import { requireAdmin } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
