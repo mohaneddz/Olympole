@@ -45,6 +45,7 @@ export type AuthDraftCookie = {
   signup_full_name?: string;
   signup_email?: string;
   signup_phone?: string;
+  signup_gender?: string;
   signup_school?: string;
   signup_year_of_study?: string;
   signup_student_id?: string;
@@ -191,6 +192,7 @@ export function writeClientAuthDraftCookie(value: AuthDraftCookie) {
     signup_full_name: truncateText(value.signup_full_name, 120) as string | undefined,
     signup_email: truncateText(value.signup_email, 254) as string | undefined,
     signup_phone: truncateText(value.signup_phone, 32) as string | undefined,
+    signup_gender: value.signup_gender === "male" || value.signup_gender === "female" ? value.signup_gender : undefined,
     signup_school: truncateText(value.signup_school, 40) as string | undefined,
     signup_year_of_study: truncateText(value.signup_year_of_study, 20) as string | undefined,
     signup_student_id: truncateText(value.signup_student_id, 32) as string | undefined,
@@ -203,6 +205,7 @@ export function writeClientAuthDraftCookie(value: AuthDraftCookie) {
       login_email: sanitized.login_email,
       signup_email: sanitized.signup_email,
       signup_phone: sanitized.signup_phone,
+      signup_gender: sanitized.signup_gender,
       signup_school: sanitized.signup_school,
       signup_year_of_study: sanitized.signup_year_of_study,
       signup_student_id: sanitized.signup_student_id,

@@ -94,6 +94,7 @@ export function LoginForm() {
     full_name: initialDraft?.signup_full_name ?? "",
     email: initialDraft?.signup_email ?? "",
     phone: initialDraft?.signup_phone ?? "",
+    gender: initialDraft?.signup_gender ?? "male",
     school: initialDraft?.signup_school ?? "",
     year_of_study: initialDraft?.signup_year_of_study ?? "",
     student_id: initialDraft?.signup_student_id ?? "",
@@ -120,6 +121,7 @@ export function LoginForm() {
       signup_full_name: signupForm.full_name,
       signup_email: signupForm.email,
       signup_phone: signupForm.phone,
+      signup_gender: signupForm.gender,
       signup_school: signupForm.school,
       signup_year_of_study: signupForm.year_of_study,
       signup_student_id: signupForm.student_id,
@@ -130,6 +132,7 @@ export function LoginForm() {
     signupForm.full_name,
     signupForm.email,
     signupForm.phone,
+    signupForm.gender,
     signupForm.school,
     signupForm.year_of_study,
     signupForm.student_id,
@@ -304,7 +307,8 @@ export function LoginForm() {
                       required
                       value={signupForm.school}
                       onChange={(event) => updateSignupField("school", event.target.value)}
-                      className="h-12 w-full appearance-none rounded-xl border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(18,31,58,0.88),rgba(9,17,38,0.88))] pl-10 pr-11 text-cyan-50 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/20"
+                      className="h-12 w-full appearance-none rounded-xl border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(18,31,58,0.88),rgba(9,17,38,0.88))] pl-10 pr-11 text-cyan-50 outline-none transition [background-image:none] focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/20"
+                      style={{ appearance: "none", WebkitAppearance: "none", MozAppearance: "none", backgroundImage: "none" }}
                     >
                       <option value="" className="bg-[#0b1735]">Select school</option>
                       <option value="ENSIA" className="bg-[#0b1735]">ENSIA</option>
@@ -330,7 +334,8 @@ export function LoginForm() {
                       required
                       value={signupForm.year_of_study}
                       onChange={(event) => updateSignupField("year_of_study", event.target.value)}
-                      className="h-12 w-full appearance-none rounded-xl border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(18,31,58,0.88),rgba(9,17,38,0.88))] pl-10 pr-11 text-cyan-50 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/20"
+                      className="h-12 w-full appearance-none rounded-xl border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(18,31,58,0.88),rgba(9,17,38,0.88))] pl-10 pr-11 text-cyan-50 outline-none transition [background-image:none] focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/20"
+                      style={{ appearance: "none", WebkitAppearance: "none", MozAppearance: "none", backgroundImage: "none" }}
                     >
                       <option value="" className="bg-[#0b1735]">Select year</option>
                       <option value="1" className="bg-[#0b1735]">1</option>
@@ -343,6 +348,35 @@ export function LoginForm() {
                     <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-100/55" />
                   </div>
                 </label>
+                <fieldset className="space-y-1.5 md:col-span-2">
+                  <legend className="text-sm font-semibold text-cyan-100/90">Gender</legend>
+                  <div className="flex w-full items-center justify-around gap-6 py-1">
+                    <label className="inline-flex items-center gap-2 text-xl text-cyan-50">
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="male"
+                        checked={signupForm.gender === "male"}
+                        onChange={(event) => updateSignupField("gender", event.target.value)}
+                        className="h-4 w-4 accent-cyan-300"
+                        required
+                      />
+                      Male
+                    </label>
+                    <label className="inline-flex items-center gap-2 text-xl text-cyan-50">
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="female"
+                        checked={signupForm.gender === "female"}
+                        onChange={(event) => updateSignupField("gender", event.target.value)}
+                        className="h-4 w-4 accent-cyan-300"
+                        required
+                      />
+                      Female
+                    </label>
+                  </div>
+                </fieldset>
               </div>
 
               <InputField
