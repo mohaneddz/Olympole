@@ -203,11 +203,7 @@ export async function completeProfileAction(_: ActionResponse, formData: FormDat
   const user = await requireAuth();
 
   const parsed = profileCompletionSchema.safeParse({
-    full_name: formData.get("full_name"),
-    school: formData.get("school"),
-    year_of_study: formData.get("year_of_study"),
     gender: formData.get("gender"),
-    student_id: formData.get("student_id"),
   });
 
   if (!parsed.success) {
@@ -218,11 +214,7 @@ export async function completeProfileAction(_: ActionResponse, formData: FormDat
   const { error } = await supabase
     .from("profiles")
     .update({
-      full_name: parsed.data.full_name,
-      school: parsed.data.school,
-      year_of_study: parsed.data.year_of_study,
       gender: parsed.data.gender,
-      student_id: parsed.data.student_id,
     })
     .eq("id", user.id);
 

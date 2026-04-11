@@ -14,18 +14,25 @@ const loginSchema = z.object({
 });
 
 const signupSchema = loginSchema.extend({
-  full_name: z.string().min(2).max(120).optional(),
-  username: z
-    .string()
-    .regex(/^[a-zA-Z0-9_]{3,32}$/)
-    .optional(),
+  full_name: z.preprocess(
+    (value) => (typeof value === "string" ? value.trim() : value),
+    z.string().min(2).max(120).optional()
+  ),
+  school: z.preprocess(trimString, z.enum(["ENSIA", "NHSM", "NSNN", "ENSSA", "ENSCS", "ESI", "Others"])),
+  year_of_study: z.preprocess(trimString, z.enum(["1", "2", "3", "4", "5", "other"])),
+  student_id: z.preprocess(
+    trimString,
+    z.string().regex(/^\d{12}$/, "Student ID must be exactly 12 digits.")
+  ),
   phone: z.preprocess(
     normalizePhoneInput,
     z.string().regex(phonePattern, "Phone number must be exactly 10 digits and start with 0.")
   ),
-  bio: z.string().max(400).optional(),
   password: z.string().min(6, "Password must be at least 6 characters long.").max(120),
 });
+function trimString(value: unknown) {
+  return typeof value === "string" ? value.trim() : value;
+}
 
 async function redirectAfterAuth(userId: string, options?: { preferProfile?: boolean }) {
   const completion = await getProfileCompletionStatus(userId);
@@ -76,9 +83,10 @@ export async function signInAction(_: ActionResponse, formData: FormData): Promi
 export async function signUpAction(_: ActionResponse, formData: FormData): Promise<ActionResponse> {
   const parsed = signupSchema.safeParse({
     full_name: formData.get("full_name") || undefined,
-    username: formData.get("username") || undefined,
+    school: formData.get("school"),
+    year_of_study: formData.get("year_of_study"),
+    student_id: formData.get("student_id"),
     phone: formData.get("phone"),
-    bio: formData.get("bio") || undefined,
     email: formData.get("email"),
     password: formData.get("password"),
   });
@@ -94,9 +102,10 @@ export async function signUpAction(_: ActionResponse, formData: FormData): Promi
     email_confirm: true,
     user_metadata: {
       full_name: parsed.data.full_name ?? null,
-      username: parsed.data.username ?? null,
+      school: parsed.data.school,
+      year_of_study: parsed.data.year_of_study,
+      student_id: parsed.data.student_id,
       phone: parsed.data.phone,
-      bio: parsed.data.bio ?? null,
     },
   });
 
