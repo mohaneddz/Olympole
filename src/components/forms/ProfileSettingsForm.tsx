@@ -72,7 +72,10 @@ export function ProfileSettingsForm({ profile }: { profile: ProfileDefaults }) {
               <option value="">Select school</option>
               <option value="ENSIA">ENSIA</option>
               <option value="NHSM">NHSM</option>
-              <option value="NHCS">NHCS</option>
+              <option value="NSNN">NSNN</option>
+              <option value="ENSSA">ENSSA</option>
+              <option value="ENSCS">ENSCS</option>
+              <option value="ESI">ESI</option>
               <option value="Others">Others</option>
             </select>
             <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-100/40" />
