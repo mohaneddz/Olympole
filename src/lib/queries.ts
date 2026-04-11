@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export type AppSettings = {
   registration_enabled: boolean;
   predictions_enabled: boolean;
+  fantasy_launch: boolean;
   writing_enabled: boolean;
   live_streaming_enabled: boolean;
   registration_max_events_per_user: number;
@@ -203,6 +204,7 @@ export async function getAppSettings(): Promise<AppSettings> {
   const defaults: AppSettings = {
     registration_enabled: true,
     predictions_enabled: true,
+    fantasy_launch: false,
     writing_enabled: true,
     live_streaming_enabled: true,
     registration_max_events_per_user: 8,
