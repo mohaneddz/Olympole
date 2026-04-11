@@ -2,6 +2,7 @@
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getAllowedActivityRegistrationTables } from "@/lib/activity-registry";
 import { requireAdmin } from "@/lib/auth";
 import { profileAdminUpdateSchema } from "@/lib/validators";
 import { logAdminAction, revalidateMany } from "@/server/_shared";
@@ -73,6 +74,44 @@ export async function deleteUserAdminAction(formData: FormData): Promise<void> {
 
   try {
     const adminSupabase = createSupabaseAdminClient();
+    const registrationTables = ["registrations", ...getAllowedActivityRegistrationTables()];
+
+    const tableSpecs: Array<{ table: string; column: string }> = [
+      ...registrationTables.flatMap((table) => [
+        { table, column: "user_id" },
+        { table, column: "profile_id" },
+      ]),
+      { table: "team_memberships", column: "profile_id" },
+      { table: "profile_roles", column: "profile_id" },
+      { table: "predictions", column: "user_id" },
+      { table: "writing_submissions", column: "user_id" },
+      { table: "submission_votes", column: "voter_user_id" },
+      { table: "fantasy_manager_gameweek_scores", column: "profile_id" },
+      { table: "fantasy_transfers", column: "profile_id" },
+      { table: "fantasy_squads", column: "profile_id" },
+      { table: "fantasy_lineups", column: "profile_id" },
+    ];
+
+    for (const spec of tableSpecs) {
+      const { error } = await adminSupabase
+        .from(spec.table)
+        .delete()
+        .eq(spec.column, targetProfileId);
+
+      if (error) {
+        const lowered = error.message.toLowerCase();
+        const isSafeToIgnore =
+          (lowered.includes("relation") && lowered.includes("does not exist"))
+          || lowered.includes("schema cache")
+          || (lowered.includes("column") && lowered.includes("does not exist"));
+
+        if (!isSafeToIgnore) {
+          return;
+        }
+      }
+    }
+
+    await adminSupabase.from("profiles").delete().eq("id", targetProfileId);
     await adminSupabase.auth.admin.deleteUser(targetProfileId);
   } catch {
     return;
