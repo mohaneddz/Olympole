@@ -14,6 +14,7 @@ export default async function OnboardingPage() {
     profile?.full_name?.trim()
     && profile?.school?.trim()
     && profile?.year_of_study?.trim()
+    && profile?.gender?.trim()
     && profile?.student_id?.trim()
   ) {
     if (profile.role === "admin") {
@@ -28,6 +29,7 @@ export default async function OnboardingPage() {
         defaultName={profile?.full_name ?? draft?.full_name}
         defaultSchool={profile?.school ?? draft?.school}
         defaultYear={profile?.year_of_study ?? draft?.year_of_study}
+        defaultGender={profile?.gender ?? draft?.gender}
         defaultStudentId={profile?.student_id ?? draft?.student_id}
       />
     </div>

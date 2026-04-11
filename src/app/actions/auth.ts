@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { failure, success, type ActionResponse } from "@/lib/actions";
 import { getProfileCompletionStatus, syncAdminRole } from "@/lib/auth";
+import { normalizePhoneInput, phonePattern } from "@/lib/phone";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -19,8 +20,8 @@ const signupSchema = loginSchema.extend({
     .regex(/^[a-zA-Z0-9_]{3,32}$/)
     .optional(),
   phone: z.preprocess(
-    (value) => (typeof value === "string" ? value.trim() : value),
-    z.string().min(6).max(30).regex(/^\+?[0-9][0-9\s().-]{5,29}$/, "Invalid phone number format.")
+    normalizePhoneInput,
+    z.string().regex(phonePattern, "Phone number must be exactly 10 digits and start with 0.")
   ),
   bio: z.string().max(400).optional(),
   password: z.string().min(6, "Password must be at least 6 characters long.").max(120),

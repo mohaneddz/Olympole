@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -31,9 +30,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const pathname = (await headers()).get("x-pathname") ?? "";
-  const isAdminRoute = pathname.startsWith("/admin");
-
   return (
     <html
       lang="en"
@@ -45,7 +41,7 @@ export default async function RootLayout({
         <main className="flex-1 flex flex-col relative z-10 w-full">
           {children}
         </main>
-        {!isAdminRoute ? <Footer /> : null}
+        <Footer />
       </body>
     </html>
   );

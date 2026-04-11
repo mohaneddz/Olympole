@@ -14,7 +14,7 @@ export default async function AdminLayout({
   return (
     <div className="flex h-[calc(100dvh-5rem)] min-h-0 overflow-hidden flex-col bg-background text-foreground md:fixed md:inset-x-0 md:bottom-0 md:top-20 md:h-auto md:flex-row">
       <aside className="w-full md:w-64 bg-card-bg border-r border-card-border flex-shrink-0 flex min-h-0 flex-col md:h-full">
-        <div className="h-16 flex items-center gap-3 px-6 border-b border-card-border bg-black/20 relative z-10">
+        <div className="h-16 flex items-center gap-3 px-6 border-b border-card-border bg-black/20 relative z-10 center ">
           <Image src="/images/brand/fire.png" width={48} height={48} alt="Olympole Flame" className="h-8 w-auto hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
           <div className="flex flex-col">
             <span className="text-[1.1rem] leading-none font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-br from-primary via-primary/80 to-secondary">

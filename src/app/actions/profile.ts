@@ -206,6 +206,7 @@ export async function completeProfileAction(_: ActionResponse, formData: FormDat
     full_name: formData.get("full_name"),
     school: formData.get("school"),
     year_of_study: formData.get("year_of_study"),
+    gender: formData.get("gender"),
     student_id: formData.get("student_id"),
   });
 
@@ -220,6 +221,7 @@ export async function completeProfileAction(_: ActionResponse, formData: FormDat
       full_name: parsed.data.full_name,
       school: parsed.data.school,
       year_of_study: parsed.data.year_of_study,
+      gender: parsed.data.gender,
       student_id: parsed.data.student_id,
     })
     .eq("id", user.id);
