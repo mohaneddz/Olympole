@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { normalizePhoneInput, phonePattern } from "@/lib/phone";
+import {
+  ACTIVITY_REGISTRATION_MAX_MOTIVATION,
+  ACTIVITY_REGISTRATION_MAX_PREVIOUS_EXPERIENCE,
+} from "@/lib/limits";
 
 const trimInput = (value: unknown) => (typeof value === "string" ? value.trim() : value);
 const uuid = z.preprocess(trimInput, z.string().uuid());
@@ -48,8 +52,8 @@ export const activityRegistrationSchema = registrationSchema.extend({
     trimInput,
     z.string().min(2).max(80).regex(/^[a-z0-9-]+$/)
   ),
-  previous_experience: optionalText(2000),
-  motivation: optionalText(2500),
+  previous_experience: optionalText(ACTIVITY_REGISTRATION_MAX_PREVIOUS_EXPERIENCE),
+  motivation: optionalText(ACTIVITY_REGISTRATION_MAX_MOTIVATION),
   availability_date: z
     .preprocess(trimInput, z.string())
     .optional()

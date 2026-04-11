@@ -14,6 +14,10 @@ import {
   writeClientRegistrationDraftCookie,
 } from "@/lib/cookie-drafts";
 import { isValidPhoneInput, normalizePhoneInput } from "@/lib/phone";
+import {
+  ACTIVITY_REGISTRATION_MAX_MOTIVATION,
+  ACTIVITY_REGISTRATION_MAX_PREVIOUS_EXPERIENCE,
+} from "@/lib/limits";
 import { Button } from "@/components/ui/Button";
 
 type EventOption = {
@@ -313,6 +317,12 @@ export function ActivityRegistrationForm({
     }
 
     if (stepIndex === 2) {
+      if (formState.previous_experience.length > ACTIVITY_REGISTRATION_MAX_PREVIOUS_EXPERIENCE) {
+        return `Previous experience must be at most ${ACTIVITY_REGISTRATION_MAX_PREVIOUS_EXPERIENCE} characters.`;
+      }
+      if (formState.motivation.length > ACTIVITY_REGISTRATION_MAX_MOTIVATION) {
+        return `Motivation must be at most ${ACTIVITY_REGISTRATION_MAX_MOTIVATION} characters.`;
+      }
       return null;
     }
 
@@ -794,11 +804,14 @@ export function ActivityRegistrationForm({
               markFieldTouched("previous_experience");
             }}
             onBlur={() => markFieldTouched("previous_experience")}
+            maxLength={ACTIVITY_REGISTRATION_MAX_PREVIOUS_EXPERIENCE}
             placeholder={activity.experiencePrompt}
             className={getFieldClass("previous_experience", false, textareaClassName)}
             disabled={isFormDisabled}
           />
-          <p className="text-xs text-cyan-200/60 mt-1">Up to 2000 characters.</p>
+          <p className="text-xs text-cyan-200/60 mt-1">
+            Up to {ACTIVITY_REGISTRATION_MAX_PREVIOUS_EXPERIENCE} characters ({formState.previous_experience.length}/{ACTIVITY_REGISTRATION_MAX_PREVIOUS_EXPERIENCE}).
+          </p>
         </label>
 
         <label className={labelClassName}>
@@ -811,11 +824,14 @@ export function ActivityRegistrationForm({
               markFieldTouched("motivation");
             }}
             onBlur={() => markFieldTouched("motivation")}
+            maxLength={ACTIVITY_REGISTRATION_MAX_MOTIVATION}
             placeholder={activity.motivationPrompt}
             className={getFieldClass("motivation", false, textareaClassName)}
             disabled={isFormDisabled}
           />
-          <p className="text-xs text-cyan-200/60 mt-1">Up to 2500 characters.</p>
+          <p className="text-xs text-cyan-200/60 mt-1">
+            Up to {ACTIVITY_REGISTRATION_MAX_MOTIVATION} characters ({formState.motivation.length}/{ACTIVITY_REGISTRATION_MAX_MOTIVATION}).
+          </p>
         </label>
 
         <div className="grid grid-cols-1 gap-y-8 gap-x-6 md:grid-cols-2">

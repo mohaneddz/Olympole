@@ -28,6 +28,14 @@ function normalizeProfileGenderToCategory(value: string | null | undefined): "me
   return "";
 }
 
+function getBackHrefForActivityCategory(category: string) {
+  if (category === "culture") {
+    return "/culture";
+  }
+
+  return "/sports";
+}
+
 function getActivityRegistrationSelect(slug: string) {
   const baseSelect =
     "id, event_id, status, created_at, full_name, email, phone, department_or_school, team_name, additional_notes, emergency_contact, previous_experience, motivation, preferred_role, events(id,title,starts_at,venue,status,is_registration_open)";
@@ -179,13 +187,14 @@ export default async function ActivityRegistrationPage({
 
   const defaultEventId = existingRegistration?.event_id ?? draft?.event_id ?? allEvents[0]?.id ?? "";
   const lockedGenderCategory = normalizeProfileGenderToCategory(profile?.gender);
+  const backHref = getBackHrefForActivityCategory(activity.category);
 
   return (
     <div className="container mx-auto flex min-h-screen max-w-6xl flex-1 flex-col gap-8 px-4 py-12 md:py-16">
       <section className="space-y-4 text-center">
         <div className="flex justify-start">
           <Link
-            href="/register"
+            href={backHref}
             className="inline-flex items-center rounded-lg border border-cyan-300/40 px-3 py-1.5 text-sm text-cyan-100 hover:bg-cyan-400/15"
           >
             Go back
