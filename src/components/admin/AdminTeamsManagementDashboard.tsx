@@ -6,7 +6,7 @@ import { createTeamAction, deleteTeamAction, updateTeamAction } from "@/server/t
 import { AdminDataTable } from "@/components/admin/AdminDataTable";
 import { Pencil, Plus, Trash2, Users, X } from "lucide-react";
 
-type SportOption = {
+export type SportOption = {
   id: string;
   name: string;
 };
@@ -246,6 +246,32 @@ function TeamMembersDialog({
   );
 }
 
+export function CreateTeamButton({ sports }: { sports: SportOption[] }) {
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setIsCreateOpen(true)}
+        className="inline-flex items-center gap-2 rounded-lg border border-cyan-300/40 bg-cyan-400/10 px-3 py-2 text-sm font-medium text-cyan-100 transition-colors hover:bg-cyan-400/20"
+      >
+        <Plus className="h-4 w-4" />
+        Create New Team
+      </button>
+
+      {isCreateOpen ? (
+        <TeamFormDialog
+          title="Create Team"
+          action={createTeamAction}
+          sports={sports}
+          onClose={() => setIsCreateOpen(false)}
+        />
+      ) : null}
+    </>
+  );
+}
+
 export function AdminTeamsManagementDashboard({
   sports,
   teams,
@@ -257,23 +283,11 @@ export function AdminTeamsManagementDashboard({
   profiles: ProfileOption[];
   memberships: MembershipRow[];
 }) {
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<TeamRow | null>(null);
   const [membersTeam, setMembersTeam] = useState<TeamRow | null>(null);
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => setIsCreateOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg border border-cyan-300/45 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100 transition hover:bg-cyan-400/20"
-        >
-          <Plus className="h-4 w-4" />
-          Create New Team
-        </button>
-      </div>
-
       <AdminDataTable
         title="Teams"
         rows={teams}
@@ -338,15 +352,6 @@ export function AdminTeamsManagementDashboard({
           </div>
         )}
       />
-
-      {isCreateOpen ? (
-        <TeamFormDialog
-          title="Create Team"
-          action={createTeamAction}
-          sports={sports}
-          onClose={() => setIsCreateOpen(false)}
-        />
-      ) : null}
 
       {editingTeam ? (
         <TeamFormDialog

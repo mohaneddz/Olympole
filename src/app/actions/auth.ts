@@ -18,6 +18,7 @@ const signupSchema = loginSchema.extend({
     (value) => (typeof value === "string" ? value.trim() : value),
     z.string().min(2).max(120).optional()
   ),
+  gender: z.preprocess(trimString, z.enum(["male", "female"])),
   school: z.preprocess(trimString, z.enum(["ENSIA", "NHSM", "NSNN", "ENSSA", "ENSCS", "ESI", "Others"])),
   year_of_study: z.preprocess(trimString, z.enum(["1", "2", "3", "4", "5", "other"])),
   student_id: z.preprocess(
@@ -83,6 +84,7 @@ export async function signInAction(_: ActionResponse, formData: FormData): Promi
 export async function signUpAction(_: ActionResponse, formData: FormData): Promise<ActionResponse> {
   const parsed = signupSchema.safeParse({
     full_name: formData.get("full_name") || undefined,
+    gender: formData.get("gender"),
     school: formData.get("school"),
     year_of_study: formData.get("year_of_study"),
     student_id: formData.get("student_id"),
@@ -102,6 +104,7 @@ export async function signUpAction(_: ActionResponse, formData: FormData): Promi
     email_confirm: true,
     user_metadata: {
       full_name: parsed.data.full_name ?? null,
+      gender: parsed.data.gender,
       school: parsed.data.school,
       year_of_study: parsed.data.year_of_study,
       student_id: parsed.data.student_id,

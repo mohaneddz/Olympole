@@ -88,7 +88,7 @@ export async function syncAdminRole(user: User) {
   const metadata = user.user_metadata ?? {};
   const metadataUsername = typeof metadata.username === "string" ? metadata.username.trim() : "";
   const metadataPhone = typeof metadata.phone === "string" ? metadata.phone.trim() : "";
-  const metadataBio = typeof metadata.bio === "string" ? metadata.bio.trim() : "";
+  const metadataGender = typeof metadata.gender === "string" ? metadata.gender.trim() : "";
   const metadataSchool = typeof metadata.school === "string" ? metadata.school.trim() : "";
   const metadataYear = typeof metadata.year_of_study === "string" ? metadata.year_of_study.trim() : "";
   const metadataStudentId = typeof metadata.student_id === "string" ? metadata.student_id.trim() : "";
@@ -99,7 +99,7 @@ export async function syncAdminRole(user: User) {
     full_name: user.user_metadata?.full_name ?? null,
     ...(metadataUsername ? { username: metadataUsername } : {}),
     ...(metadataPhone ? { phone: metadataPhone } : {}),
-    ...(metadataBio ? { bio: metadataBio } : {}),
+    ...(metadataGender ? { gender: metadataGender } : {}),
     ...(metadataSchool ? { school: metadataSchool } : {}),
     ...(metadataYear ? { year_of_study: metadataYear } : {}),
     ...(metadataStudentId ? { student_id: metadataStudentId } : {}),

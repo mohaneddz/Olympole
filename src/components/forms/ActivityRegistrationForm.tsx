@@ -230,6 +230,13 @@ export function ActivityRegistrationForm({
     { title: "Activity Details", description: "Role and activity-specific details" },
     { title: "Experience & Availability", description: "Background and logistics" },
   ] as const;
+  const shouldSkipStepTwo = activity.slug === "art-exhibition";
+  const visibleStepIndexes = shouldSkipStepTwo ? [0, 2] : [0, 1, 2];
+  const currentVisibleStepPosition = Math.max(visibleStepIndexes.indexOf(currentStep), 0);
+  const stepGridClassName =
+    visibleStepIndexes.length === 2
+      ? "grid grid-cols-1 gap-3 sm:grid-cols-2"
+      : "grid grid-cols-1 gap-3 sm:grid-cols-3";
   const roleSelectionBySlug: Record<string, string[]> = {
     football: ["Field Player", "Goalkeeper"],
     handball: ["Field Player", "Goalkeeper"],
@@ -302,9 +309,6 @@ export function ActivityRegistrationForm({
       if (activity.slug === "writing-contest") {
         return requireValue(formState.detail_writing_category, "Writing category");
       }
-      if (activity.slug === "art-exhibition") {
-        return requireValue(formState.detail_art_category, "Art category");
-      }
       if (activity.slug === "running") {
         return requireValue(formState.detail_running_distance, "Running distance");
       }
@@ -329,6 +333,30 @@ export function ActivityRegistrationForm({
     return null;
   }
 
+  function getNextStep(stepIndex: number) {
+    if (!shouldSkipStepTwo) {
+      return Math.min(stepIndex + 1, steps.length - 1);
+    }
+
+    if (stepIndex === 0) {
+      return 2;
+    }
+
+    return stepIndex;
+  }
+
+  function getPreviousStep(stepIndex: number) {
+    if (!shouldSkipStepTwo) {
+      return Math.max(stepIndex - 1, 0);
+    }
+
+    if (stepIndex === 2) {
+      return 0;
+    }
+
+    return stepIndex;
+  }
+
   function goToNextStep() {
     const validationError = validateStep(currentStep);
     if (validationError) {
@@ -336,19 +364,18 @@ export function ActivityRegistrationForm({
       return;
     }
     setStepError("");
-    setCurrentStep((previous) => Math.min(previous + 1, steps.length - 1));
+    setCurrentStep((previous) => getNextStep(previous));
   }
 
   function goToPreviousStep() {
     setStepError("");
-    setCurrentStep((previous) => Math.max(previous - 1, 0));
+    setCurrentStep((previous) => getPreviousStep(previous));
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    const firstError =
-      validateStep(0)
-      ?? validateStep(1)
-      ?? validateStep(2);
+    const firstError = visibleStepIndexes
+      .map((stepIndex) => validateStep(stepIndex))
+      .find((error): error is string => Boolean(error));
 
     if (firstError) {
       event.preventDefault();
@@ -358,6 +385,12 @@ export function ActivityRegistrationForm({
 
     setStepError("");
   }
+
+  useEffect(() => {
+    if (shouldSkipStepTwo && currentStep === 1) {
+      setCurrentStep(2);
+    }
+  }, [shouldSkipStepTwo, currentStep]);
 
   return (
     <div className="space-y-6">
@@ -391,16 +424,19 @@ export function ActivityRegistrationForm({
         <input type="hidden" name="category_type" value={activity.category} />
         {isEditing ? <input type="hidden" name="registration_id" value={existingRegistration?.id ?? ""} /> : null}
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {steps.map((step, index) => {
-            const isActive = currentStep === index;
-            const isCompleted = currentStep > index;
+        <div className={stepGridClassName}>
+          {visibleStepIndexes.map((stepIndex) => {
+            const step = steps[stepIndex];
+            const stepPosition = visibleStepIndexes.indexOf(stepIndex);
+            const visibleStepNumber = stepPosition + 1;
+            const isActive = currentStep === stepIndex;
+            const isCompleted = stepPosition < currentVisibleStepPosition;
             return (
               <button
                 key={step.title}
                 type="button"
-                disabled={!isCompleted && !isActive}
-                onClick={() => setCurrentStep(index)}
+                disabled={(!isCompleted && !isActive) ? true : undefined}
+                onClick={() => setCurrentStep(stepIndex)}
                 className={`rounded-2xl border px-4 py-3 text-left transition ${
                   isActive
                     ? "border-cyan-200/65 bg-cyan-300/20 text-cyan-50"
@@ -409,7 +445,7 @@ export function ActivityRegistrationForm({
                       : "cursor-not-allowed border-cyan-300/20 bg-background/25 text-cyan-100/55"
                 }`}
               >
-                <p className="text-xs uppercase tracking-[0.18em]">Step {index + 1}</p>
+                <p className="text-xs uppercase tracking-[0.18em]">Step {visibleStepNumber}</p>
                 <p className="mt-1 text-sm font-semibold">{step.title}</p>
               </button>
             );
@@ -563,7 +599,7 @@ export function ActivityRegistrationForm({
         )}
 
         {activity.slug === "running" ? (
-          <div className="grid grid-cols-1 gap-y-8 gap-x-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-y-8 gap-x-6">
             <label className={labelClassName}>
               <span>Running distance *</span>
               <select
@@ -584,7 +620,7 @@ export function ActivityRegistrationForm({
                 <option value="both">Both</option>
               </select>
             </label>
-            <label className="inline-flex items-center gap-2 text-sm text-cyan-100 pt-9">
+            <label className="inline-flex items-center gap-2 text-sm text-cyan-100">
               <input type="hidden" name="detail_joined_marathon_before" value={formState.detail_joined_marathon_before || "no"} />
               <input
                 type="checkbox"
@@ -599,9 +635,9 @@ export function ActivityRegistrationForm({
         ) : null}
 
         {activity.slug === "chess" ? (
-          <div className="grid grid-cols-1 gap-y-8 gap-x-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-y-8 gap-x-6">
             <label className={labelClassName}>
-              <span>Elo rating</span>
+              <span>Elo rating (optional)</span>
               <input
                 name="detail_elo_rating"
                 value={formState.detail_elo_rating}
@@ -618,7 +654,7 @@ export function ActivityRegistrationForm({
                 disabled={isFormDisabled}
               />
             </label>
-            <label className="inline-flex items-center gap-2 text-sm text-cyan-100 pt-9">
+            <label className="inline-flex items-center gap-2 text-sm text-cyan-100">
               <input type="hidden" name="detail_participated_before" value={formState.detail_participated_before || "no"} />
               <input
                 type="checkbox"
@@ -633,7 +669,7 @@ export function ActivityRegistrationForm({
         ) : null}
 
         {activity.slug === "writing-contest" ? (
-          <div className="grid grid-cols-1 gap-y-8 gap-x-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-y-8">
             <label className={labelClassName}>
               <span>Writing category *</span>
               <select
@@ -649,14 +685,12 @@ export function ActivityRegistrationForm({
                 disabled={isFormDisabled}
               >
                 <option value="">Select category</option>
+                <option value="argumentative-essay">Argumentative essay</option>
+                <option value="narrative-essay">Narrative essay</option>
                 <option value="poetry">Poetry</option>
-                <option value="short-story">Short story</option>
-                <option value="essay">Essay</option>
-                <option value="article">Article</option>
-                <option value="open-letter">Open letter</option>
               </select>
             </label>
-            <label className="inline-flex items-center gap-2 text-sm text-cyan-100 pt-9">
+            <label className="inline-flex items-center gap-2 text-sm text-cyan-100">
               <input type="hidden" name="detail_participated_before" value={formState.detail_participated_before || "no"} />
               <input
                 type="checkbox"
@@ -870,7 +904,7 @@ export function ActivityRegistrationForm({
             </Button>
           ) : null}
 
-          {currentStep < steps.length - 1 ? (
+          {getNextStep(currentStep) !== currentStep ? (
             <Button
               key="continue"
               type="button"

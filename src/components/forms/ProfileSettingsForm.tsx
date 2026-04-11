@@ -13,7 +13,6 @@ type ProfileDefaults = {
   student_id: string | null;
   username: string | null;
   phone: string | null;
-  bio: string | null;
   timezone: string | null;
 };
 
@@ -26,7 +25,7 @@ export function ProfileSettingsForm({ profile }: { profile: ProfileDefaults }) {
   return (
     <section className="flex h-full flex-col rounded-3xl border border-cyan-300/20 bg-[linear-gradient(130deg,rgba(4,17,50,0.82),rgba(3,10,32,0.92))] p-6 shadow-[0_0_0_1px_rgba(34,211,238,0.12)] md:p-8">
       <div>
-        <h2 className="flex items-center gap-2 text-3xl font-black text-white">
+        <h2 className="flex items-center gap-2 text-2xl font-black text-white md:text-3xl">
           <UserRound className="h-6 w-6 text-violet-300" />
           Profile Information
         </h2>
@@ -125,17 +124,6 @@ export function ProfileSettingsForm({ profile }: { profile: ProfileDefaults }) {
           />
         </label>
       </div>
-
-      <label className="mt-4 block space-y-1.5">
-        <span className="text-sm text-cyan-100/85">Short Bio</span>
-        <textarea
-          name="bio"
-          defaultValue={profile.bio ?? ""}
-          placeholder="Short bio"
-          disabled
-          className="min-h-24 w-full rounded-xl border border-cyan-300/20 bg-background/45 px-3 py-2 text-cyan-50 placeholder:text-cyan-100/35 disabled:cursor-not-allowed disabled:border-cyan-200/10 disabled:bg-background/20 disabled:text-cyan-100/45 disabled:opacity-100"
-        />
-      </label>
 
       <div className="mt-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
         <Button type="button" variant="neonPill" asChild className="h-11 px-6 text-base">
