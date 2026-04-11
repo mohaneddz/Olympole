@@ -21,6 +21,13 @@ function pickFirstNonEmpty(...values: Array<string | null | undefined>) {
   return "";
 }
 
+function normalizeProfileGenderToCategory(value: string | null | undefined): "men" | "women" | "" {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (["man", "male", "men"].includes(normalized)) return "men";
+  if (["woman", "female", "women"].includes(normalized)) return "women";
+  return "";
+}
+
 function getActivityRegistrationSelect(slug: string) {
   const baseSelect =
     "id, event_id, status, created_at, full_name, email, phone, department_or_school, team_name, additional_notes, emergency_contact, previous_experience, motivation, preferred_role, events(id,title,starts_at,venue,status,is_registration_open)";
@@ -30,19 +37,23 @@ function getActivityRegistrationSelect(slug: string) {
   }
 
   if (slug === "chess") {
-    return `${baseSelect}, detail_competition_level, detail_elo_rating`;
+    return `${baseSelect}, detail_elo_rating, detail_participated_before`;
   }
 
   if (slug === "running") {
-    return `${baseSelect}, detail_competition_level`;
+    return `${baseSelect}, detail_running_distance, detail_joined_marathon_before`;
   }
 
   if (slug === "talent-show") {
-    return `${baseSelect}, detail_talent_type, detail_performance_description`;
+    return `${baseSelect}, detail_talent_type, detail_talent_type_other, detail_performance_description, detail_participated_before`;
+  }
+
+  if (slug === "writing-contest") {
+    return `${baseSelect}, detail_writing_category, detail_participated_before`;
   }
 
   if (slug === "art-exhibition") {
-    return `${baseSelect}, detail_art_category`;
+    return `${baseSelect}, detail_art_category, detail_participated_before`;
   }
 
   return baseSelect;
@@ -99,13 +110,13 @@ export default async function ActivityRegistrationPage({
     createSupabaseServerClient(),
   ]);
 
-  if (!profile?.full_name || !profile?.school || !profile?.year_of_study || !profile?.student_id) {
+  if (!profile?.full_name || !profile?.school || !profile?.year_of_study || !profile?.gender || !profile?.student_id) {
     return (
       <div className="container mx-auto flex min-h-screen max-w-4xl flex-1 items-center px-4 py-16">
         <div className="w-full space-y-4 rounded-2xl border border-card-border bg-card-bg/20 p-8">
           <h1 className="text-3xl font-black">Complete your profile first</h1>
           <p className="text-foreground/70">
-            Before registering to {activity.title}, please complete your profile with name, school, study year, and student ID.
+            Before registering to {activity.title}, please complete your profile with name, school, study year, gender, and student ID.
           </p>
           <Link href="/onboarding" className="inline-flex rounded-lg border border-primary/60 px-4 py-2 text-primary">
             Go to onboarding
@@ -120,8 +131,6 @@ export default async function ActivityRegistrationPage({
       .from("events")
       .select("id, title, starts_at, venue, status, is_registration_open, activities!inner(slug)")
       .eq("activities.slug", activity.slug)
-      .eq("is_registration_open", true)
-      .in("status", ["scheduled", "live"])
       .order("starts_at", { ascending: true }),
     (supabase as any)
       .from(managedActivity.tableName)
@@ -133,7 +142,7 @@ export default async function ActivityRegistrationPage({
 
   const existingRegistration = existingRows?.[0] ?? null;
 
-  const openEvents = (events ?? []).map((event) => ({
+  const linkedEvents = (events ?? []).map((event) => ({
     id: event.id,
     title: event.title,
     starts_at: event.starts_at,
@@ -147,7 +156,7 @@ export default async function ActivityRegistrationPage({
     : existingRegistration?.events;
 
   const includesExistingEvent =
-    !!existingRegistration?.event_id && openEvents.some((event) => event.id === existingRegistration.event_id);
+    !!existingRegistration?.event_id && linkedEvents.some((event) => event.id === existingRegistration.event_id);
 
   const allEvents =
     existingEventRelation && !includesExistingEvent
@@ -160,19 +169,28 @@ export default async function ActivityRegistrationPage({
             status: existingEventRelation.status,
             is_registration_open: existingEventRelation.is_registration_open,
           },
-          ...openEvents,
+          ...linkedEvents,
         ]
-      : openEvents;
+      : linkedEvents;
 
   const draft = parseRegistrationDraftCookie(
     cookieStore.get(getRegistrationDraftCookieName(activity.slug))?.value
   );
 
   const defaultEventId = existingRegistration?.event_id ?? draft?.event_id ?? allEvents[0]?.id ?? "";
+  const lockedGenderCategory = normalizeProfileGenderToCategory(profile?.gender);
 
   return (
     <div className="container mx-auto flex min-h-screen max-w-6xl flex-1 flex-col gap-8 px-4 py-12 md:py-16">
       <section className="space-y-4 text-center">
+        <div className="flex justify-start">
+          <Link
+            href="/register"
+            className="inline-flex items-center rounded-lg border border-cyan-300/40 px-3 py-1.5 text-sm text-cyan-100 hover:bg-cyan-400/15"
+          >
+            Go back
+          </Link>
+        </div>
         <p className="inline-flex items-center rounded-full border border-card-border px-3 py-1 text-xs uppercase tracking-[0.2em] text-foreground/70">
           {activity.category.replace("_", " ")}
         </p>
@@ -187,6 +205,7 @@ export default async function ActivityRegistrationPage({
       <ActivityRegistrationForm
         activity={activity}
         events={allEvents}
+        lockedGenderCategory={lockedGenderCategory}
         existingRegistration={
           existingRegistration
             ? {
@@ -209,11 +228,20 @@ export default async function ActivityRegistrationPage({
           availability_date: "",
           preferred_role: existingRegistration?.preferred_role ?? draft?.preferred_role ?? "",
           additional_notes: "",
-          detail_gender: String(existingRegistration?.detail_gender ?? "") || draft?.detail_gender || (activity.slug === "football" ? "men" : ""),
+          detail_gender:
+            lockedGenderCategory
+            || String(existingRegistration?.detail_gender ?? "")
+            || draft?.detail_gender
+            || (activity.slug === "football" ? "men" : ""),
           detail_competition_level: String(existingRegistration?.detail_competition_level ?? "") || draft?.detail_competition_level || "",
+          detail_running_distance: String(existingRegistration?.detail_running_distance ?? "") || draft?.detail_running_distance || "",
+          detail_joined_marathon_before: String(existingRegistration?.detail_joined_marathon_before ?? "") || draft?.detail_joined_marathon_before || "no",
+          detail_participated_before: String(existingRegistration?.detail_participated_before ?? "") || draft?.detail_participated_before || "no",
           detail_elo_rating: String(existingRegistration?.detail_elo_rating ?? "") || draft?.detail_elo_rating || "",
           detail_talent_type: String(existingRegistration?.detail_talent_type ?? "") || draft?.detail_talent_type || "",
+          detail_talent_type_other: String(existingRegistration?.detail_talent_type_other ?? "") || draft?.detail_talent_type_other || "",
           detail_performance_description: String(existingRegistration?.detail_performance_description ?? "") || draft?.detail_performance_description || "",
+          detail_writing_category: String(existingRegistration?.detail_writing_category ?? "") || draft?.detail_writing_category || "",
           detail_art_category: String(existingRegistration?.detail_art_category ?? "") || draft?.detail_art_category || "",
           detail_strengths: "",
           detail_schedule: "",

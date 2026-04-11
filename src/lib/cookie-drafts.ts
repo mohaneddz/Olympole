@@ -5,6 +5,7 @@ export type ProfileDraftCookie = {
   full_name?: string;
   school?: string;
   year_of_study?: string;
+  gender?: string;
   student_id?: string;
 };
 
@@ -23,9 +24,14 @@ export type RegistrationDraftCookie = {
   additional_notes?: string;
   detail_gender?: string;
   detail_competition_level?: string;
+  detail_running_distance?: string;
+  detail_joined_marathon_before?: string;
+  detail_participated_before?: string;
   detail_elo_rating?: string;
   detail_talent_type?: string;
+  detail_talent_type_other?: string;
   detail_performance_description?: string;
+  detail_writing_category?: string;
   detail_art_category?: string;
   detail_strengths?: string;
   detail_schedule?: string;

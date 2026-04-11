@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useActionState } from "react";
-import { createRegistrationAction } from "@/app/actions/registrations";
+import { createRegistrationAction } from "@/server/registrations";
 import { Button } from "@/components/ui/Button";
 
 type EventOption = {

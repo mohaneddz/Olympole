@@ -1,6 +1,6 @@
 "use client";
 
-import { deleteSportAction } from "@/app/actions/events";
+import { deleteSportAction } from "@/server/sports";
 import { AdminDataTable } from "@/components/admin/AdminDataTable";
 
 type SportRow = {

@@ -1,10 +1,11 @@
 import Image from "next/image";
 import { SHARED_DECORATIVE_ELEMENTS } from "@/data/decoration";
-import { getFantasyRegisteredPlayers } from "@/lib/queries";
+import { getAppSettings, getFantasyRegisteredPlayers } from "@/lib/queries";
 import { PredictionsTabbedContent } from "@/components/predictions/PredictionsTabbedContent";
 
 export default async function PredictionsPage() {
-  const availablePlayers = await getFantasyRegisteredPlayers();
+  const settings = await getAppSettings();
+  const availablePlayers = settings.fantasy_launch ? await getFantasyRegisteredPlayers() : [];
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
@@ -36,7 +37,16 @@ export default async function PredictionsPage() {
             <Image key={i} src={el.src} alt="" width={120} height={120} aria-hidden className={`pointer-events-none ${el.className}`} />
           ))}
 
-          <PredictionsTabbedContent availablePlayers={availablePlayers} />
+          {settings.fantasy_launch ? (
+            <PredictionsTabbedContent availablePlayers={availablePlayers} />
+          ) : (
+            <section id="fantasy" className="rounded-2xl border border-card-border bg-card/50 p-8 text-center">
+              <p className="font-heading text-3xl font-black tracking-tight text-white md:text-4xl">Fantasy Coming Soon</p>
+              <p className="mt-3 text-sm text-foreground/70 md:text-base">
+                The fantasy experience is not launched yet. Check back soon.
+              </p>
+            </section>
+          )}
         </div>
       </main>
     </div>

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizePhoneInput, phonePattern } from "@/lib/phone";
 
 const trimInput = (value: unknown) => (typeof value === "string" ? value.trim() : value);
 const uuid = z.preprocess(trimInput, z.string().uuid());
@@ -13,13 +14,15 @@ const requiredText = (min: number, max: number, label: string) =>
 
 const optionalText = (max: number) => z.preprocess(trimInput, z.string().max(max)).optional().or(z.literal(""));
 
-const phonePattern = /^\+?[0-9][0-9\s().-]{5,29}$/;
 const requiredPhone = z.preprocess(
-  trimInput,
-  z.string().min(6).max(30).regex(phonePattern, "Invalid phone number format.")
+  normalizePhoneInput,
+  z.string().regex(phonePattern, "Phone number must be exactly 10 digits and start with 0.")
 );
 const optionalPhone = z
-  .preprocess(trimInput, z.string().max(30).regex(phonePattern, "Invalid phone number format."))
+  .preprocess(
+    normalizePhoneInput,
+    z.string().regex(phonePattern, "Phone number must be exactly 10 digits and start with 0.")
+  )
   .optional()
   .or(z.literal(""));
 
@@ -40,12 +43,13 @@ export const registrationBatchSchema = registrationSchema.extend({
 });
 
 export const activityRegistrationSchema = registrationSchema.extend({
+  event_id: uuid.optional().or(z.literal("")),
   activity_slug: z.preprocess(
     trimInput,
     z.string().min(2).max(80).regex(/^[a-z0-9-]+$/)
   ),
-  previous_experience: requiredText(2, 2000, "Previous experience"),
-  motivation: requiredText(4, 2500, "Motivation"),
+  previous_experience: optionalText(2000),
+  motivation: optionalText(2500),
   availability_date: z
     .preprocess(trimInput, z.string())
     .optional()
@@ -132,6 +136,7 @@ export const appSettingSchema = z.object({
   key: z.enum([
     "registration_enabled",
     "predictions_enabled",
+    "fantasy_launch",
     "writing_enabled",
     "live_streaming_enabled",
     "registration_max_events_per_user",
@@ -143,13 +148,23 @@ export const profileCompletionSchema = z.object({
   full_name: requiredText(2, 120, "Full name"),
   school: z.preprocess(trimInput, z.enum(["ENSIA", "NHSM", "NHCS", "Others"])),
   year_of_study: z.preprocess(trimInput, z.enum(["1", "2", "3", "4", "5", "other"])),
+  gender: z.preprocess(trimInput, z.enum(["male", "female"])),
   student_id: z.preprocess(
     trimInput,
     z.string().regex(/^\d{12}$/, "Student ID must be exactly 12 digits.")
   ),
 });
 
-export const profileUpdateSchema = profileCompletionSchema.extend({
+export const profileUpdateSchema = z.object({
+  full_name: requiredText(2, 120, "Full name"),
+  school: z.preprocess(trimInput, z.enum(["ENSIA", "NHSM", "NHCS", "Others"])),
+  year_of_study: z.preprocess(trimInput, z.enum(["1", "2", "3", "4", "5", "other"])),
+  student_id: z.preprocess(
+    trimInput,
+    z.string().regex(/^\d{12}$/, "Student ID must be exactly 12 digits.")
+  )
+    .optional()
+    .or(z.literal("")),
   username: z.preprocess(
     trimInput,
     z.string().regex(/^[a-zA-Z0-9_]{3,32}$/)
@@ -159,6 +174,7 @@ export const profileUpdateSchema = profileCompletionSchema.extend({
   phone: optionalPhone,
   bio: optionalText(400),
   timezone: optionalText(80),
+  gender: z.preprocess(trimInput, z.enum(["male", "female"])).optional(),
 });
 
 export const sportSchema = z.object({

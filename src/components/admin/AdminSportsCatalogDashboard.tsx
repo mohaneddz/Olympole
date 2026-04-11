@@ -1,11 +1,9 @@
 "use client";
 
 import {
-  createSportAction,
-  createTeamAction,
-  deleteSportAction,
-  deleteTeamAction,
-} from "@/app/actions/events";
+  createSportAction, deleteSportAction,
+} from "@/server/sports";
+import { createTeamAction, deleteTeamAction } from "@/server/teams";
 import { AdminDataTable } from "@/components/admin/AdminDataTable";
 
 type SportRow = {

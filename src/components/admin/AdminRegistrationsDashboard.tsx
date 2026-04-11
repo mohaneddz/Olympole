@@ -3,8 +3,8 @@
 import {
   assignRegistrationTeamAction,
   deleteRegistrationAdminAction,
-} from "@/app/actions/admin-management";
-import { updateRegistrationStatusAction } from "@/app/actions/registrations";
+  updateRegistrationStatusAction,
+} from "@/server/registrations";
 import { AdminDataTable } from "@/components/admin/AdminDataTable";
 
 type RegistrationRow = {
@@ -25,9 +25,9 @@ type RegistrationRow = {
   availability_date: string | null;
   preferred_role: string | null;
   created_at: string;
-  event_title: string;
-  event_slug: string;
-  event_starts_at: string;
+  event_title: string | null;
+  event_slug: string | null;
+  event_starts_at: string | null;
 };
 
 type TeamOption = {
@@ -61,8 +61,8 @@ export function AdminRegistrationsDashboard({
       initialPageSize={10}
       maxRowsPerPage={40}
       rowsPerPageOptions={[5, 10, 20, 40]}
-      searchPlaceholder="Search by name, email, event, activity..."
-      searchKeys={["full_name", "email", "event_title", "activity_slug", "team_name"]}
+      searchPlaceholder="Search by name, email, activity, team..."
+      searchKeys={["full_name", "email", "activity_slug", "team_name", "previous_experience", "motivation"]}
       filters={[
         {
           key: "status",
@@ -101,19 +101,8 @@ export function AdminRegistrationsDashboard({
           sortable: true,
           render: (row) => (
             <div className="space-y-1">
-              <p className="text-sm font-medium">{row.activity_slug ?? row.event_slug}</p>
+              <p className="text-sm font-medium">{row.activity_slug ?? row.event_slug ?? "-"}</p>
               <p className="text-xs text-foreground/60">{row.category_type}</p>
-            </div>
-          ),
-        },
-        {
-          key: "event_title",
-          label: "Event",
-          sortable: true,
-          render: (row) => (
-            <div className="space-y-1">
-              <p>{row.event_title}</p>
-              <p className="text-xs text-foreground/60">{formatDate(row.event_starts_at)}</p>
             </div>
           ),
         },
@@ -121,6 +110,26 @@ export function AdminRegistrationsDashboard({
           key: "status",
           label: "Status",
           sortable: true,
+        },
+        {
+          key: "previous_experience",
+          label: "Experience",
+          sortable: true,
+          render: (row) => (
+            <p className="max-w-xs truncate" title={row.previous_experience ?? "-"}>
+              {row.previous_experience ?? "-"}
+            </p>
+          ),
+        },
+        {
+          key: "motivation",
+          label: "Motivation",
+          sortable: true,
+          render: (row) => (
+            <p className="max-w-xs truncate" title={row.motivation ?? "-"}>
+              {row.motivation ?? "-"}
+            </p>
+          ),
         },
         {
           key: "team_name",

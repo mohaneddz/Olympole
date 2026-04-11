@@ -1,21 +1,16 @@
 "use client";
 
 import {
-  assignProfileToTeamAction,
   assignTeamToTournamentAction,
   clearTournamentDistributionAction,
   createTournamentAction,
   deleteTournamentAction,
   randomDistributeTournamentTeamsAction,
-  removeTeamMembershipAction,
   removeTournamentTeamAction,
-} from "@/app/actions/admin-management";
-import {
-  createSportAction,
-  createTeamAction,
-  deleteSportAction,
-  deleteTeamAction,
-} from "@/app/actions/events";
+} from "@/server/tournaments";
+import { createSportAction, deleteSportAction } from "@/server/sports";
+import { createTeamAction, deleteTeamAction } from "@/server/teams";
+import { assignProfileToTeamAction, removeTeamMembershipAction } from "@/server/team-memberships";
 import { AdminDataTable } from "@/components/admin/AdminDataTable";
 
 type SportRow = {

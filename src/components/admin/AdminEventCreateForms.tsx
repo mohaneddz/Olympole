@@ -1,7 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { createEventAction, createMatchAction, createResultAction } from "@/app/actions/events";
+import { createEventAction } from "@/server/events";
+import { createMatchAction } from "@/server/matches";
+import { createResultAction } from "@/server/results";
 import type { ActionResponse } from "@/lib/actions";
 
 type EventOption = {

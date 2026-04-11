@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { deleteEventAction } from "@/app/actions/events";
+import { deleteEventAction } from "@/server/events";
 import { AdminDataTable } from "@/components/admin/AdminDataTable";
 import { EventFormDialog } from "@/components/admin/EventFormDialog";
 import { Calendar, Pencil, Trash2 } from "lucide-react";

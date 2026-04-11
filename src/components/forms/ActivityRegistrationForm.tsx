@@ -6,13 +6,14 @@ import {
   createActivityRegistrationAction,
   deleteActivityRegistrationAction,
   updateActivityRegistrationAction,
-} from "@/app/actions/registrations";
+} from "@/server/registrations";
 import type { RegistrationActivity } from "@/data/registration-activities";
 import type { ActionResponse } from "@/lib/actions";
 import {
   clearClientRegistrationDraftCookie,
   writeClientRegistrationDraftCookie,
 } from "@/lib/cookie-drafts";
+import { isValidPhoneInput, normalizePhoneInput } from "@/lib/phone";
 import { Button } from "@/components/ui/Button";
 
 type EventOption = {
@@ -45,9 +46,14 @@ type DefaultValues = {
   additional_notes: string;
   detail_gender: string;
   detail_competition_level: string;
+  detail_running_distance: string;
+  detail_joined_marathon_before: string;
+  detail_participated_before: string;
   detail_elo_rating: string;
   detail_talent_type: string;
+  detail_talent_type_other: string;
   detail_performance_description: string;
+  detail_writing_category: string;
   detail_art_category: string;
   detail_strengths: string;
   detail_schedule: string;
@@ -68,16 +74,20 @@ type FormState = {
   additional_notes: string;
   detail_gender: string;
   detail_competition_level: string;
+  detail_running_distance: string;
+  detail_joined_marathon_before: string;
+  detail_participated_before: string;
   detail_elo_rating: string;
   detail_talent_type: string;
+  detail_talent_type_other: string;
   detail_performance_description: string;
+  detail_writing_category: string;
   detail_art_category: string;
   detail_strengths: string;
   detail_schedule: string;
 };
 
 const initialState = { ok: false, message: "" };
-const phonePattern = /^\+?[0-9][0-9\s().-]{5,29}$/;
 const integerPattern = /^\d+$/;
 
 const labelClassName = "flex w-full flex-col gap-3 text-base font-semibold text-cyan-50";
@@ -106,9 +116,14 @@ function buildInitialFormValues(defaults: DefaultValues, events: EventOption[]):
     additional_notes: defaults.additional_notes,
     detail_gender: defaults.detail_gender,
     detail_competition_level: defaults.detail_competition_level,
+    detail_running_distance: defaults.detail_running_distance,
+    detail_joined_marathon_before: defaults.detail_joined_marathon_before,
+    detail_participated_before: defaults.detail_participated_before,
     detail_elo_rating: defaults.detail_elo_rating,
     detail_talent_type: defaults.detail_talent_type,
+    detail_talent_type_other: defaults.detail_talent_type_other,
     detail_performance_description: defaults.detail_performance_description,
+    detail_writing_category: defaults.detail_writing_category,
     detail_art_category: defaults.detail_art_category,
     detail_strengths: defaults.detail_strengths,
     detail_schedule: defaults.detail_schedule,
@@ -118,11 +133,13 @@ function buildInitialFormValues(defaults: DefaultValues, events: EventOption[]):
 export function ActivityRegistrationForm({
   activity,
   events,
+  lockedGenderCategory,
   defaults,
   existingRegistration,
 }: {
   activity: RegistrationActivity;
   events: EventOption[];
+  lockedGenderCategory: "men" | "women" | "";
   defaults: DefaultValues;
   existingRegistration: ExistingRegistration | null;
 }) {
@@ -131,10 +148,13 @@ export function ActivityRegistrationForm({
   const [actionState, formAction, pending] = useActionState(actionHandler, initialState);
   const [toast, setToast] = useState<ActionResponse | null>(null);
   const [formState, setFormState] = useState<FormState>(() => buildInitialFormValues(defaults, events));
+  const [hasTeam, setHasTeam] = useState(() => Boolean(defaults.team_name?.trim()));
   const [touchedFields, setTouchedFields] = useState<Partial<Record<keyof FormState, boolean>>>({});
 
   useEffect(() => {
-    setFormState(buildInitialFormValues(defaults, events));
+    const nextFormState = buildInitialFormValues(defaults, events);
+    setFormState(nextFormState);
+    setHasTeam(Boolean(nextFormState.team_name.trim()));
     setTouchedFields({});
   }, [defaults, events]);
 
@@ -154,9 +174,14 @@ export function ActivityRegistrationForm({
       additional_notes: formState.additional_notes,
       detail_gender: formState.detail_gender,
       detail_competition_level: formState.detail_competition_level,
+      detail_running_distance: formState.detail_running_distance,
+      detail_joined_marathon_before: formState.detail_joined_marathon_before,
+      detail_participated_before: formState.detail_participated_before,
       detail_elo_rating: formState.detail_elo_rating,
       detail_talent_type: formState.detail_talent_type,
+      detail_talent_type_other: formState.detail_talent_type_other,
       detail_performance_description: formState.detail_performance_description,
+      detail_writing_category: formState.detail_writing_category,
       detail_art_category: formState.detail_art_category,
       detail_strengths: formState.detail_strengths,
       detail_schedule: formState.detail_schedule,
@@ -192,7 +217,7 @@ export function ActivityRegistrationForm({
     return () => window.clearTimeout(toastTimeoutId);
   }, [actionState, router]);
 
-  const isFormDisabled = pending || events.length === 0;
+  const isFormDisabled = pending;
   const isEditing = Boolean(existingRegistration);
   const [currentStep, setCurrentStep] = useState(0);
   const [stepError, setStepError] = useState("");
@@ -201,9 +226,20 @@ export function ActivityRegistrationForm({
     { title: "Activity Details", description: "Role and activity-specific details" },
     { title: "Experience & Availability", description: "Background and logistics" },
   ] as const;
+  const roleSelectionBySlug: Record<string, string[]> = {
+    football: ["Field Player", "Goalkeeper"],
+    handball: ["Field Player", "Goalkeeper"],
+  };
+  const shouldShowPreferredRole = Boolean(roleSelectionBySlug[activity.slug]);
+  const isCheckboxChecked = (value: string) => value.trim().toLowerCase() === "yes";
 
   function updateField<Key extends keyof FormState>(key: Key, value: FormState[Key]) {
     setFormState((current) => ({ ...current, [key]: value }));
+  }
+
+  function normalizePhoneFieldValue(value: string) {
+    const normalized = normalizePhoneInput(value);
+    return typeof normalized === "string" ? normalized : value;
   }
 
   function markFieldTouched<Key extends keyof FormState>(key: Key) {
@@ -225,40 +261,59 @@ export function ActivityRegistrationForm({
   function validateStep(stepIndex: number) {
     if (stepIndex === 0) {
       if (activity.category === "collective_sport") {
+        if (!lockedGenderCategory) {
+          return "Category is locked from your profile gender. Please complete your profile first.";
+        }
         const genderError = requireValue(formState.detail_gender, "Category");
         if (genderError) return genderError;
+        if (activity.slug === "football" && formState.detail_gender !== "men") {
+          return "Football registrations are currently limited to men's category.";
+        }
       }
 
       return (
         requireValue(formState.full_name, "Full name")
         ?? requireValue(formState.email, "Email")
         ?? requireValue(formState.phone, "Phone")
+        ?? (!isValidPhoneInput(formState.phone) ? "Phone number must be exactly 10 digits and start with 0." : null)
         ?? requireValue(formState.department_or_school, "School / Institution")
-        ?? requireValue(formState.event_id, "Activity event")
       );
     }
 
     if (stepIndex === 1) {
-      const preferredRoleError = requireValue(formState.preferred_role, "Preferred role");
-      if (preferredRoleError) return preferredRoleError;
+      if (shouldShowPreferredRole) {
+        const preferredRoleError = requireValue(formState.preferred_role, "Preferred role");
+        if (preferredRoleError) return preferredRoleError;
+      }
 
       if (activity.slug === "talent-show") {
+        if (formState.detail_talent_type === "other" && !formState.detail_talent_type_other.trim()) {
+          return "Please specify your talent type.";
+        }
         return (
           requireValue(formState.detail_talent_type, "Type of talent / act")
           ?? requireValue(formState.detail_performance_description, "Performance description")
         );
       }
+      if (activity.slug === "writing-contest") {
+        return requireValue(formState.detail_writing_category, "Writing category");
+      }
       if (activity.slug === "art-exhibition") {
         return requireValue(formState.detail_art_category, "Art category");
+      }
+      if (activity.slug === "running") {
+        return requireValue(formState.detail_running_distance, "Running distance");
+      }
+      if (activity.slug === "chess") {
+        if (formState.detail_elo_rating.trim() && !integerPattern.test(formState.detail_elo_rating.trim())) {
+          return "Elo rating must be a number.";
+        }
       }
       return null;
     }
 
     if (stepIndex === 2) {
-      return (
-        requireValue(formState.previous_experience, "Previous experience")
-        ?? requireValue(formState.motivation, "Motivation")
-      );
+      return null;
     }
 
     return null;
@@ -355,28 +410,24 @@ export function ActivityRegistrationForm({
         {activity.category === "collective_sport" ? (
           <label className={labelClassName}>
             <span>Category *</span>
+            <input type="hidden" name="detail_gender" value={formState.detail_gender} />
             <select
-              name="detail_gender"
+              name="detail_gender_display"
               required
               value={formState.detail_gender}
-              onChange={(event) => {
-                updateField("detail_gender", event.target.value);
-                markFieldTouched("detail_gender");
-              }}
-              onBlur={() => markFieldTouched("detail_gender")}
               className={getFieldClass("detail_gender", !formState.detail_gender.trim())}
-              disabled={isFormDisabled}
+              disabled
             >
-              {activity.slug === "football" ? (
-                <option value="men">Men</option>
+              {!lockedGenderCategory ? (
+                <option value="">Set gender in your profile first</option>
               ) : (
                 <>
-                  <option value="">Select category</option>
-                  <option value="men">Men</option>
-                  <option value="women">Women</option>
+                  {lockedGenderCategory === "men" ? <option value="men">Men</option> : null}
+                  {lockedGenderCategory === "women" ? <option value="women">Women</option> : null}
                 </>
               )}
             </select>
+            <p className="text-xs text-cyan-200/60 mt-1">Category is locked to your profile gender.</p>
           </label>
         ) : null}
 
@@ -416,12 +467,11 @@ export function ActivityRegistrationForm({
               name="phone_display"
               required
               value={formState.phone}
-              onChange={(event) => updateField("phone", event.target.value)}
               className={`${inputClassName} disabled:bg-[#0b1c44]/55`}
+              placeholder="e.g. 0696451419"
               disabled
-              placeholder="e.g. +213555555555 or 0555555555"
             />
-            <p className="text-xs text-cyan-200/60 mt-1">Between 6 and 30 characters. Including +, -, spaces, or parentheses.</p>
+            <p className="text-xs text-cyan-200/60 mt-1">Use exactly 10 digits starting with 0 (example: 0696451419).</p>
           </label>
           <label className={labelClassName}>
             <span>School / Institution</span>
@@ -441,9 +491,9 @@ export function ActivityRegistrationForm({
         </section>
 
         <section className={currentStep === 1 ? "space-y-10" : "hidden"}>
-        <label className={labelClassName}>
-          <span>{activity.rolePrompt}</span>
-          {activity.rolesList ? (
+        {shouldShowPreferredRole ? (
+          <label className={labelClassName}>
+            <span>{activity.rolePrompt}</span>
             <select
               name="preferred_role"
               required
@@ -457,99 +507,164 @@ export function ActivityRegistrationForm({
               disabled={isFormDisabled}
             >
               <option value="">Select preferred role</option>
-              {activity.rolesList.map((role) => (
+              {roleSelectionBySlug[activity.slug].map((role) => (
                 <option key={role} value={role}>{role}</option>
               ))}
             </select>
-          ) : activity.slug === "football" ? (
-            <select
-              name="preferred_role"
-              required
-              value={formState.preferred_role}
-              onChange={(event) => {
-                updateField("preferred_role", event.target.value);
-                markFieldTouched("preferred_role");
-              }}
-              onBlur={() => markFieldTouched("preferred_role")}
-              className={getFieldClass("preferred_role", !formState.preferred_role.trim())}
-              disabled={isFormDisabled}
-            >
-              <option value="">Select preferred role</option>
-              <option value="Field Player">Field Player</option>
-              <option value="Goal Keeper">Goal Keeper</option>
-            </select>
-          ) : (
-            <input
-              name="preferred_role"
-              value={formState.preferred_role}
-              onChange={(event) => {
-                updateField("preferred_role", event.target.value);
-                markFieldTouched("preferred_role");
-              }}
-              onBlur={() => markFieldTouched("preferred_role")}
-              placeholder={activity.rolePrompt}
-              className={getFieldClass("preferred_role", !formState.preferred_role.trim())}
-              disabled={isFormDisabled}
-            />
-          )}
-        </label>
+          </label>
+        ) : (
+          <input type="hidden" name="preferred_role" value="" />
+        )}
 
         {activity.teamBased ? (
-          <label className={labelClassName}>
-            <span>Team name</span>
-            <input
-              name="team_name"
-              value={formState.team_name}
-              onChange={(event) => updateField("team_name", event.target.value)}
-              placeholder="Team name"
-              className={inputClassName}
-              disabled={isFormDisabled}
-            />
-          </label>
+          <div className="space-y-3">
+            <label className="inline-flex items-center gap-2 text-sm text-cyan-100">
+              <input
+                type="checkbox"
+                checked={hasTeam}
+                onChange={(event) => {
+                  const checked = event.target.checked;
+                  setHasTeam(checked);
+                  if (!checked) {
+                    updateField("team_name", "");
+                  }
+                }}
+                disabled={isFormDisabled}
+                className="h-4 w-4 rounded border-cyan-300/40 bg-[#061536]/85 accent-cyan-300"
+              />
+              I have a team
+            </label>
+
+            <label className={labelClassName}>
+              <span>Team name</span>
+              <input type="hidden" name="team_name" value={formState.team_name} />
+              <input
+                name="team_name_display"
+                value={formState.team_name}
+                onChange={(event) => updateField("team_name", event.target.value)}
+                placeholder="Team name"
+                className={`${inputClassName} disabled:bg-[#0b1c44]/55`}
+                disabled={!hasTeam || isFormDisabled}
+              />
+            </label>
+          </div>
         ) : (
           <input type="hidden" name="team_name" value={formState.team_name} />
         )}
 
-        {(activity.slug === "running" || activity.slug === "chess") ? (
-          <label className={labelClassName}>
-            <span>Competition level</span>
-            <input
-              name="detail_competition_level"
-              value={formState.detail_competition_level}
-              onChange={(event) => updateField("detail_competition_level", event.target.value)}
-              placeholder="Your main competition level"
-              className={inputClassName}
-              disabled={isFormDisabled}
-            />
-          </label>
+        {activity.slug === "running" ? (
+          <div className="grid grid-cols-1 gap-y-8 gap-x-6 md:grid-cols-2">
+            <label className={labelClassName}>
+              <span>Running distance *</span>
+              <select
+                name="detail_running_distance"
+                required
+                value={formState.detail_running_distance}
+                onChange={(event) => {
+                  updateField("detail_running_distance", event.target.value);
+                  markFieldTouched("detail_running_distance");
+                }}
+                onBlur={() => markFieldTouched("detail_running_distance")}
+                className={getFieldClass("detail_running_distance", !formState.detail_running_distance.trim())}
+                disabled={isFormDisabled}
+              >
+                <option value="">Select distance</option>
+                <option value="100m">100m</option>
+                <option value="10km">10km</option>
+                <option value="both">Both</option>
+              </select>
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-cyan-100 pt-9">
+              <input type="hidden" name="detail_joined_marathon_before" value={formState.detail_joined_marathon_before || "no"} />
+              <input
+                type="checkbox"
+                checked={isCheckboxChecked(formState.detail_joined_marathon_before)}
+                onChange={(event) => updateField("detail_joined_marathon_before", event.target.checked ? "yes" : "no")}
+                disabled={isFormDisabled}
+                className="h-4 w-4 rounded border-cyan-300/40 bg-[#061536]/85 accent-cyan-300"
+              />
+              I have joined a marathon before
+            </label>
+          </div>
         ) : null}
 
         {activity.slug === "chess" ? (
-          <label className={labelClassName}>
-            <span>Elo rating (optional)</span>
-            <input
-              name="detail_elo_rating"
-              value={formState.detail_elo_rating}
-              onChange={(event) => {
-                updateField("detail_elo_rating", event.target.value);
-                markFieldTouched("detail_elo_rating");
-              }}
-              onBlur={() => markFieldTouched("detail_elo_rating")}
-              placeholder="e.g. 1600"
-              className={getFieldClass(
-                "detail_elo_rating",
-                !!formState.detail_elo_rating.trim() && !integerPattern.test(formState.detail_elo_rating.trim())
-              )}
-              disabled={isFormDisabled}
-            />
-          </label>
+          <div className="grid grid-cols-1 gap-y-8 gap-x-6 md:grid-cols-2">
+            <label className={labelClassName}>
+              <span>Elo rating</span>
+              <input
+                name="detail_elo_rating"
+                value={formState.detail_elo_rating}
+                onChange={(event) => {
+                  updateField("detail_elo_rating", event.target.value);
+                  markFieldTouched("detail_elo_rating");
+                }}
+                onBlur={() => markFieldTouched("detail_elo_rating")}
+                placeholder="e.g. 1600"
+                className={getFieldClass(
+                  "detail_elo_rating",
+                  !!formState.detail_elo_rating.trim() && !integerPattern.test(formState.detail_elo_rating.trim())
+                )}
+                disabled={isFormDisabled}
+              />
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-cyan-100 pt-9">
+              <input type="hidden" name="detail_participated_before" value={formState.detail_participated_before || "no"} />
+              <input
+                type="checkbox"
+                checked={isCheckboxChecked(formState.detail_participated_before)}
+                onChange={(event) => updateField("detail_participated_before", event.target.checked ? "yes" : "no")}
+                disabled={isFormDisabled}
+                className="h-4 w-4 rounded border-cyan-300/40 bg-[#061536]/85 accent-cyan-300"
+              />
+              I have participated in a chess competition before
+            </label>
+          </div>
+        ) : null}
+
+        {activity.slug === "writing-contest" ? (
+          <div className="grid grid-cols-1 gap-y-8 gap-x-6 md:grid-cols-2">
+            <label className={labelClassName}>
+              <span>Writing category *</span>
+              <select
+                name="detail_writing_category"
+                required
+                value={formState.detail_writing_category}
+                onChange={(event) => {
+                  updateField("detail_writing_category", event.target.value);
+                  markFieldTouched("detail_writing_category");
+                }}
+                onBlur={() => markFieldTouched("detail_writing_category")}
+                className={getFieldClass("detail_writing_category", !formState.detail_writing_category.trim())}
+                disabled={isFormDisabled}
+              >
+                <option value="">Select category</option>
+                <option value="poetry">Poetry</option>
+                <option value="short-story">Short story</option>
+                <option value="essay">Essay</option>
+                <option value="article">Article</option>
+                <option value="open-letter">Open letter</option>
+              </select>
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-cyan-100 pt-9">
+              <input type="hidden" name="detail_participated_before" value={formState.detail_participated_before || "no"} />
+              <input
+                type="checkbox"
+                checked={isCheckboxChecked(formState.detail_participated_before)}
+                onChange={(event) => updateField("detail_participated_before", event.target.checked ? "yes" : "no")}
+                disabled={isFormDisabled}
+                className="h-4 w-4 rounded border-cyan-300/40 bg-[#061536]/85 accent-cyan-300"
+              />
+              I have participated before
+            </label>
+          </div>
         ) : null}
 
         {activity.slug === "talent-show" ? (
           <div className="grid grid-cols-1 gap-y-8 gap-x-6 md:grid-cols-2">
             <label className={labelClassName}>
               <span>Type of talent / act *</span>
-              <input
+              <select
                 name="detail_talent_type"
                 required
                 value={formState.detail_talent_type}
@@ -558,13 +673,24 @@ export function ActivityRegistrationForm({
                   markFieldTouched("detail_talent_type");
                 }}
                 onBlur={() => markFieldTouched("detail_talent_type")}
-                placeholder="Singing, dance, stand-up..."
                 className={getFieldClass("detail_talent_type", !formState.detail_talent_type.trim())}
                 disabled={isFormDisabled}
-              />
+              >
+                <option value="">Select talent type</option>
+                <option value="singing">Singing</option>
+                <option value="dance">Dance</option>
+                <option value="rap">Rap</option>
+                <option value="instrument">Instrument</option>
+                <option value="stand-up">Stand-up comedy</option>
+                <option value="poetry">Poetry</option>
+                <option value="magic">Magic</option>
+                <option value="acting">Acting</option>
+                <option value="beatbox">Beatbox</option>
+                <option value="other">Other</option>
+              </select>
             </label>
             <label className={labelClassName}>
-              <span>Performance description *</span>
+              <span>Performance short description *</span>
               <input
                 name="detail_performance_description"
                 required
@@ -582,41 +708,86 @@ export function ActivityRegistrationForm({
                 disabled={isFormDisabled}
               />
             </label>
+            {formState.detail_talent_type === "other" ? (
+              <label className={`${labelClassName} md:col-span-2`}>
+                <span>Specify your talent type *</span>
+                <input
+                  name="detail_talent_type_other"
+                  required
+                  value={formState.detail_talent_type_other}
+                  onChange={(event) => {
+                    updateField("detail_talent_type_other", event.target.value);
+                    markFieldTouched("detail_talent_type_other");
+                  }}
+                  onBlur={() => markFieldTouched("detail_talent_type_other")}
+                  placeholder="Describe your talent"
+                  className={getFieldClass(
+                    "detail_talent_type_other",
+                    formState.detail_talent_type === "other" && !formState.detail_talent_type_other.trim()
+                  )}
+                  disabled={isFormDisabled}
+                />
+              </label>
+            ) : null}
+            <label className="inline-flex items-center gap-2 text-sm text-cyan-100 md:col-span-2">
+              <input type="hidden" name="detail_participated_before" value={formState.detail_participated_before || "no"} />
+              <input
+                type="checkbox"
+                checked={isCheckboxChecked(formState.detail_participated_before)}
+                onChange={(event) => updateField("detail_participated_before", event.target.checked ? "yes" : "no")}
+                disabled={isFormDisabled}
+                className="h-4 w-4 rounded border-cyan-300/40 bg-[#061536]/85 accent-cyan-300"
+              />
+              I have participated before
+            </label>
           </div>
         ) : null}
 
         {activity.slug === "art-exhibition" ? (
-          <label className={labelClassName}>
-            <span>Art category *</span>
-            <select
-              name="detail_art_category"
-              required
-              value={formState.detail_art_category}
-              onChange={(event) => {
-                updateField("detail_art_category", event.target.value);
-                markFieldTouched("detail_art_category");
-              }}
-              onBlur={() => markFieldTouched("detail_art_category")}
-              className={getFieldClass("detail_art_category", !formState.detail_art_category.trim())}
-              disabled={isFormDisabled}
-            >
-              <option value="">Select art category</option>
-              <option value="drawing">Drawing</option>
-              <option value="painting">Painting</option>
-              <option value="digital-art">Digital art</option>
-              <option value="mixed-media">Mixed media</option>
-            </select>
-          </label>
+          <div className="grid grid-cols-1 gap-y-8 gap-x-6 md:grid-cols-2">
+            <label className={labelClassName}>
+              <span>Art category *</span>
+              <select
+                name="detail_art_category"
+                required
+                value={formState.detail_art_category}
+                onChange={(event) => {
+                  updateField("detail_art_category", event.target.value);
+                  markFieldTouched("detail_art_category");
+                }}
+                onBlur={() => markFieldTouched("detail_art_category")}
+                className={getFieldClass("detail_art_category", !formState.detail_art_category.trim())}
+                disabled={isFormDisabled}
+              >
+                <option value="">Select art category</option>
+                <option value="drawing">Drawing</option>
+                <option value="painting">Painting</option>
+                <option value="digital-art">Digital art</option>
+                <option value="mixed-media">Mixed media</option>
+                <option value="calligraphy">Calligraphy</option>
+              </select>
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-cyan-100 pt-9">
+              <input type="hidden" name="detail_participated_before" value={formState.detail_participated_before || "no"} />
+              <input
+                type="checkbox"
+                checked={isCheckboxChecked(formState.detail_participated_before)}
+                onChange={(event) => updateField("detail_participated_before", event.target.checked ? "yes" : "no")}
+                disabled={isFormDisabled}
+                className="h-4 w-4 rounded border-cyan-300/40 bg-[#061536]/85 accent-cyan-300"
+              />
+              I have participated before
+            </label>
+          </div>
         ) : null}
 
         </section>
 
         <section className={currentStep === 2 ? "space-y-10" : "hidden"}>
         <label className={labelClassName}>
-          <span>Previous experience</span>
+          <span>Previous experience (optional)</span>
           <textarea
             name="previous_experience"
-            required
             value={formState.previous_experience}
             onChange={(event) => {
               updateField("previous_experience", event.target.value);
@@ -624,21 +795,16 @@ export function ActivityRegistrationForm({
             }}
             onBlur={() => markFieldTouched("previous_experience")}
             placeholder={activity.experiencePrompt}
-            className={getFieldClass(
-              "previous_experience",
-              formState.previous_experience.trim().length < 2 || formState.previous_experience.trim().length > 2000,
-              textareaClassName
-            )}
+            className={getFieldClass("previous_experience", false, textareaClassName)}
             disabled={isFormDisabled}
           />
-          <p className="text-xs text-cyan-200/60 mt-1">Between 2 and 2000 characters.</p>
+          <p className="text-xs text-cyan-200/60 mt-1">Up to 2000 characters.</p>
         </label>
 
         <label className={labelClassName}>
-          <span>Motivation</span>
+          <span>Motivation (optional)</span>
           <textarea
             name="motivation"
-            required
             value={formState.motivation}
             onChange={(event) => {
               updateField("motivation", event.target.value);
@@ -646,14 +812,10 @@ export function ActivityRegistrationForm({
             }}
             onBlur={() => markFieldTouched("motivation")}
             placeholder={activity.motivationPrompt}
-            className={getFieldClass(
-              "motivation",
-              formState.motivation.trim().length < 4 || formState.motivation.trim().length > 2500,
-              textareaClassName
-            )}
+            className={getFieldClass("motivation", false, textareaClassName)}
             disabled={isFormDisabled}
           />
-          <p className="text-xs text-cyan-200/60 mt-1">Between 4 and 2500 characters.</p>
+          <p className="text-xs text-cyan-200/60 mt-1">Up to 2500 characters.</p>
         </label>
 
         <div className="grid grid-cols-1 gap-y-8 gap-x-6 md:grid-cols-2">
@@ -663,14 +825,14 @@ export function ActivityRegistrationForm({
               name="emergency_contact"
               value={formState.emergency_contact}
               onChange={(event) => {
-                updateField("emergency_contact", event.target.value);
+                updateField("emergency_contact", normalizePhoneFieldValue(event.target.value));
                 markFieldTouched("emergency_contact");
               }}
               onBlur={() => markFieldTouched("emergency_contact")}
-              placeholder="e.g. +213555555555"
+              placeholder="e.g. 0696451419"
               className={getFieldClass(
                 "emergency_contact",
-                !!formState.emergency_contact.trim() && !phonePattern.test(formState.emergency_contact.trim())
+                !!formState.emergency_contact.trim() && !isValidPhoneInput(formState.emergency_contact)
               )}
               disabled={isFormDisabled}
             />
