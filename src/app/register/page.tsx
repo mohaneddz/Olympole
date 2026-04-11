@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { REGISTRATION_ACTIVITIES } from "@/data/registration-activities";
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
 import { getAppSettings } from "@/lib/queries";
@@ -27,13 +26,14 @@ export default async function RegisterPage() {
     );
   }
 
-  if (!user) {
-    redirect("/login");
-  }
-
-  if (!profile?.full_name || !profile?.school || !profile?.year_of_study || !profile?.student_id) {
-    redirect("/onboarding");
-  }
+  // No auth redirect — guests are welcome to browse and register.
+  const isLoggedIn = !!user;
+  const hasCompleteProfile =
+    isLoggedIn &&
+    !!profile?.full_name &&
+    !!profile?.school &&
+    !!profile?.year_of_study &&
+    !!profile?.student_id;
 
   return (
     <div className="container mx-auto flex max-w-6xl flex-1 flex-col gap-10 px-4 py-12 md:py-16">
@@ -42,9 +42,32 @@ export default async function RegisterPage() {
           Activity Registration Portal
         </h1>
         <p className="mx-auto mt-4 max-w-3xl text-foreground/70">
-          Choose one of the 10 activities below. Each activity has a dedicated registration form and your draft is
-          saved in cookies automatically.
+          Choose one of the 10 activities below. No account required — fill in
+          your details directly on the registration form. Creating an account
+          lets you track your registration status later.
         </p>
+
+        {/* Contextual nudge — only shown to logged-in users with incomplete profiles */}
+        {isLoggedIn && !hasCompleteProfile && (
+          <p className="mx-auto mt-3 max-w-xl text-sm text-yellow-300/80">
+            Your profile is incomplete.{" "}
+            <Link href="/onboarding" className="underline underline-offset-2">
+              Complete it
+            </Link>{" "}
+            to have your details pre-filled on registration forms.
+          </p>
+        )}
+
+        {/* CTA for guests */}
+        {!isLoggedIn && (
+          <p className="mx-auto mt-3 max-w-xl text-sm text-foreground/50">
+            Already have an account?{" "}
+            <Link href="/login" className="text-primary underline underline-offset-2">
+              Log in
+            </Link>{" "}
+            to track your registrations.
+          </p>
+        )}
       </section>
 
       {(["collective_sport", "individual_sport", "culture"] as const).map((category) => {
@@ -61,7 +84,7 @@ export default async function RegisterPage() {
                 >
                   <h3 className="text-xl font-semibold">{activity.title}</h3>
                   <p className="mt-2 text-sm text-foreground/70">{activity.shortDescription}</p>
-                  <p className="mt-4 text-sm font-semibold text-primary">Open form</p>
+                  <p className="mt-4 text-sm font-semibold text-primary">Open form →</p>
                 </Link>
               ))}
             </div>

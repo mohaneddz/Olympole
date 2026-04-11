@@ -1,25 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cookies } from "next/headers";
 import { ActivityRegistrationForm } from "@/components/forms/ActivityRegistrationForm";
 import { getRegistrationActivityBySlug } from "@/data/registration-activities";
-import {
-  getRegistrationDraftCookieName,
-  parseRegistrationDraftCookie,
-} from "@/lib/cookie-drafts";
 import { getManagedActivityBySlug } from "@/lib/activity-registry";
 import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
 import { getAppSettings } from "@/lib/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-function pickFirstNonEmpty(...values: Array<string | null | undefined>) {
-  for (const value of values) {
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value;
-    }
-  }
-  return "";
-}
 
 function normalizeProfileGenderToCategory(value: string | null | undefined): "men" | "women" | "" {
   const normalized = String(value ?? "").trim().toLowerCase();
@@ -95,44 +81,96 @@ export default async function ActivityRegistrationPage({
     );
   }
 
+  const backHref = getBackHrefForActivityCategory(activity.category);
+
+  // ── Guest path ────────────────────────────────────────────────────────────
+  // No account required. Fetch available events, render the form with blank
+  // defaults. user_id / profile_id will be null on submission.
   if (!user) {
+    const supabase = await createSupabaseServerClient();
+
+    const { data: events } = await supabase
+      .from("events")
+      .select("id, title, starts_at, venue, status, is_registration_open, activities!inner(slug)")
+      .eq("activities.slug", activity.slug)
+      .order("starts_at", { ascending: true });
+
+    const linkedEvents = (events ?? []).map((event) => ({
+      id: event.id,
+      title: event.title,
+      starts_at: event.starts_at,
+      venue: event.venue,
+      status: event.status,
+      is_registration_open: event.is_registration_open,
+    }));
+
     return (
-      <div className="container mx-auto flex min-h-screen max-w-4xl flex-1 items-center px-4 py-16">
-        <div className="w-full space-y-4 rounded-2xl border border-card-border bg-card-bg/20 p-8">
-          <h1 className="text-3xl font-black">Register for {activity.title}</h1>
-          <p className="text-foreground/70">
-            You need an account first. Your registration draft will be saved in cookies once you start filling this
-            form.
+      <div className="container mx-auto flex min-h-screen max-w-6xl flex-1 flex-col gap-8 px-4 py-12 md:py-16">
+        <section className="space-y-4 text-center">
+          <div className="flex justify-start">
+            <Link
+              href={backHref}
+              className="inline-flex items-center rounded-lg border border-cyan-300/40 px-3 py-1.5 text-sm text-cyan-100 hover:bg-cyan-400/15"
+            >
+              Go back
+            </Link>
+          </div>
+          <p className="inline-flex items-center rounded-full border border-card-border px-3 py-1 text-xs uppercase tracking-[0.2em] text-foreground/70">
+            {activity.category.replace("_", " ")}
           </p>
-          <Link href="/login" className="inline-flex rounded-lg border border-primary/60 px-4 py-2 text-primary">
-            Login / Create account
-          </Link>
-        </div>
+          <h1 className="text-4xl font-black tracking-tight md:text-6xl">
+            <span className={`bg-gradient-to-r ${activity.heroGradient} bg-clip-text text-transparent`}>
+              {activity.title} Registration
+            </span>
+          </h1>
+          <p className="mx-auto max-w-3xl text-lg text-foreground/80">{activity.shortDescription}</p>
+        </section>
+
+        <ActivityRegistrationForm
+          activity={activity}
+          events={linkedEvents}
+          lockedGenderCategory=""
+          existingRegistration={null}
+          defaults={{
+            event_id: linkedEvents[0]?.id ?? "",
+            full_name: "",
+            email: "",
+            phone: "",
+            department_or_school: "",
+            team_name: "",
+            emergency_contact: "",
+            previous_experience: "",
+            motivation: "",
+            availability_date: "",
+            preferred_role: "",
+            additional_notes: "",
+            detail_gender: activity.slug === "football" ? "men" : "",
+            detail_competition_level: "",
+            detail_running_distance: "",
+            detail_joined_marathon_before: "no",
+            detail_participated_before: "no",
+            detail_elo_rating: "",
+            detail_talent_type: "",
+            detail_talent_type_other: "",
+            detail_performance_description: "",
+            detail_writing_category: "",
+            detail_art_category: "",
+            detail_strengths: "",
+            detail_schedule: "",
+          }}
+        />
       </div>
     );
   }
 
-  const [profile, cookieStore, supabase] = await Promise.all([
+  // ── Authenticated path ─────────────────────────────────────────────────────
+  // User is logged in. We attempt to pre-fill from their profile and load
+  // any existing registration. Profile completeness is no longer a hard gate
+  // — the form will just have fewer pre-filled fields if the profile is sparse.
+  const [profile, supabase] = await Promise.all([
     getCurrentProfile(),
-    cookies(),
     createSupabaseServerClient(),
   ]);
-
-  if (!profile?.full_name || !profile?.school || !profile?.year_of_study || !profile?.gender || !profile?.student_id) {
-    return (
-      <div className="container mx-auto flex min-h-screen max-w-4xl flex-1 items-center px-4 py-16">
-        <div className="w-full space-y-4 rounded-2xl border border-card-border bg-card-bg/20 p-8">
-          <h1 className="text-3xl font-black">Complete your profile first</h1>
-          <p className="text-foreground/70">
-            Before registering to {activity.title}, please complete your profile with name, school, study year, gender, and student ID.
-          </p>
-          <Link href="/onboarding" className="inline-flex rounded-lg border border-primary/60 px-4 py-2 text-primary">
-            Go to onboarding
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   const [{ data: events }, { data: existingRows }] = await Promise.all([
     supabase
@@ -164,7 +202,8 @@ export default async function ActivityRegistrationPage({
     : existingRegistration?.events;
 
   const includesExistingEvent =
-    !!existingRegistration?.event_id && linkedEvents.some((event) => event.id === existingRegistration.event_id);
+    !!existingRegistration?.event_id &&
+    linkedEvents.some((event) => event.id === existingRegistration.event_id);
 
   const allEvents =
     existingEventRelation && !includesExistingEvent
@@ -181,13 +220,12 @@ export default async function ActivityRegistrationPage({
         ]
       : linkedEvents;
 
-  const draft = parseRegistrationDraftCookie(
-    cookieStore.get(getRegistrationDraftCookieName(activity.slug))?.value
-  );
-
-  const defaultEventId = existingRegistration?.event_id ?? draft?.event_id ?? allEvents[0]?.id ?? "";
+  const defaultEventId = existingRegistration?.event_id ?? allEvents[0]?.id ?? "";
   const lockedGenderCategory = normalizeProfileGenderToCategory(profile?.gender);
-  const backHref = getBackHrefForActivityCategory(activity.category);
+
+  // Surface an incomplete-profile hint, but never block the form.
+  const profileIsIncomplete =
+    !profile?.full_name || !profile?.school || !profile?.year_of_study || !profile?.gender || !profile?.student_id;
 
   return (
     <div className="container mx-auto flex min-h-screen max-w-6xl flex-1 flex-col gap-8 px-4 py-12 md:py-16">
@@ -209,6 +247,16 @@ export default async function ActivityRegistrationPage({
           </span>
         </h1>
         <p className="mx-auto max-w-3xl text-lg text-foreground/80">{activity.shortDescription}</p>
+
+        {profileIsIncomplete && (
+          <p className="mx-auto max-w-xl text-sm text-yellow-300/80">
+            Your profile is incomplete — some fields below may not be pre-filled.{" "}
+            <Link href="/onboarding" className="underline underline-offset-2">
+              Complete your profile
+            </Link>{" "}
+            anytime to fix that.
+          </p>
+        )}
       </section>
 
       <ActivityRegistrationForm
@@ -226,32 +274,28 @@ export default async function ActivityRegistrationPage({
         }
         defaults={{
           event_id: defaultEventId,
-          full_name: pickFirstNonEmpty(existingRegistration?.full_name, draft?.full_name, profile.full_name),
-          email: pickFirstNonEmpty(existingRegistration?.email, draft?.email, profile.email, user.email),
-          phone: pickFirstNonEmpty(existingRegistration?.phone, draft?.phone, profile.phone),
-          department_or_school: pickFirstNonEmpty(existingRegistration?.department_or_school, draft?.department_or_school, profile.school),
-          team_name: existingRegistration?.team_name ?? draft?.team_name ?? "",
-          emergency_contact: existingRegistration?.emergency_contact ?? draft?.emergency_contact ?? "",
-          previous_experience: existingRegistration?.previous_experience ?? draft?.previous_experience ?? "",
-          motivation: existingRegistration?.motivation ?? draft?.motivation ?? "",
+          full_name: existingRegistration?.full_name ?? profile?.full_name ?? "",
+          email: existingRegistration?.email ?? profile?.email ?? user.email ?? "",
+          phone: existingRegistration?.phone ?? profile?.phone ?? "",
+          department_or_school: existingRegistration?.department_or_school ?? profile?.school ?? "",
+          team_name: existingRegistration?.team_name ?? "",
+          emergency_contact: existingRegistration?.emergency_contact ?? "",
+          previous_experience: existingRegistration?.previous_experience ?? "",
+          motivation: existingRegistration?.motivation ?? "",
           availability_date: "",
-          preferred_role: existingRegistration?.preferred_role ?? draft?.preferred_role ?? "",
+          preferred_role: existingRegistration?.preferred_role ?? "",
           additional_notes: "",
-          detail_gender:
-            lockedGenderCategory
-            || String(existingRegistration?.detail_gender ?? "")
-            || draft?.detail_gender
-            || (activity.slug === "football" ? "men" : ""),
-          detail_competition_level: String(existingRegistration?.detail_competition_level ?? "") || draft?.detail_competition_level || "",
-          detail_running_distance: String(existingRegistration?.detail_running_distance ?? "") || draft?.detail_running_distance || "",
-          detail_joined_marathon_before: String(existingRegistration?.detail_joined_marathon_before ?? "") || draft?.detail_joined_marathon_before || "no",
-          detail_participated_before: String(existingRegistration?.detail_participated_before ?? "") || draft?.detail_participated_before || "no",
-          detail_elo_rating: String(existingRegistration?.detail_elo_rating ?? "") || draft?.detail_elo_rating || "",
-          detail_talent_type: String(existingRegistration?.detail_talent_type ?? "") || draft?.detail_talent_type || "",
-          detail_talent_type_other: String(existingRegistration?.detail_talent_type_other ?? "") || draft?.detail_talent_type_other || "",
-          detail_performance_description: String(existingRegistration?.detail_performance_description ?? "") || draft?.detail_performance_description || "",
-          detail_writing_category: String(existingRegistration?.detail_writing_category ?? "") || draft?.detail_writing_category || "",
-          detail_art_category: String(existingRegistration?.detail_art_category ?? "") || draft?.detail_art_category || "",
+          detail_gender: lockedGenderCategory || String(existingRegistration?.detail_gender ?? "") || (activity.slug === "football" ? "men" : ""),
+          detail_competition_level: String(existingRegistration?.detail_competition_level ?? "") || "",
+          detail_running_distance: String(existingRegistration?.detail_running_distance ?? "") || "",
+          detail_joined_marathon_before: String(existingRegistration?.detail_joined_marathon_before ?? "") || "no",
+          detail_participated_before: String(existingRegistration?.detail_participated_before ?? "") || "no",
+          detail_elo_rating: String(existingRegistration?.detail_elo_rating ?? "") || "",
+          detail_talent_type: String(existingRegistration?.detail_talent_type ?? "") || "",
+          detail_talent_type_other: String(existingRegistration?.detail_talent_type_other ?? "") || "",
+          detail_performance_description: String(existingRegistration?.detail_performance_description ?? "") || "",
+          detail_writing_category: String(existingRegistration?.detail_writing_category ?? "") || "",
+          detail_art_category: String(existingRegistration?.detail_art_category ?? "") || "",
           detail_strengths: "",
           detail_schedule: "",
         }}

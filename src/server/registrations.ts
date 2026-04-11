@@ -1,10 +1,8 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { failure, success, type ActionResponse } from "@/lib/actions";
 import { getAllowedActivityRegistrationTables, getManagedActivityBySlug } from "@/lib/activity-registry";
-import { getCurrentProfile, requireAdmin, requireAuth } from "@/lib/auth";
-import { getRegistrationDraftCookieName } from "@/lib/cookie-drafts";
+import { getCurrentProfile, getCurrentUser, requireAdmin, requireAuth } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { activityRegistrationSchema, registrationBatchSchema } from "@/lib/validators";
 import { logAdminAction, revalidateAdminRegistrationPages, revalidateMany } from "@/server/_shared";
@@ -287,13 +285,11 @@ export async function createActivityRegistrationAction(
   _: ActionResponse,
   formData: FormData
 ): Promise<ActionResponse> {
-  try {
-    const user = await requireAuth();
-    const profile = await getCurrentProfile();
-
-  if (!profile?.full_name || !profile?.school || !profile?.year_of_study || !profile?.gender || !profile?.student_id) {
-    return failure("Please complete your profile first before registering to activities.");
-  }
+  // Guest-friendly: user may be null. requireAuth() must NOT be called here
+  // because it calls redirect() which throws — and that throw must never be
+  // caught. We use getCurrentUser() instead and allow null.
+  const user = await getCurrentUser();
+  const profile = user ? await getCurrentProfile() : null;
 
   const { parsed, details } = parseActivityRegistrationPayload(formData);
   if (!parsed.success) {
@@ -310,18 +306,21 @@ export async function createActivityRegistrationAction(
     return failure(detailsValidationError);
   }
 
-  const normalizedProfileCategory = normalizeProfileGenderToCategory(profile?.gender);
+  // For collective sports, use profile gender if available, otherwise accept
+  // whatever the user submitted from the form.
   if (parsed.data.category_type === "collective_sport") {
-    if (!normalizedProfileCategory) {
-      return failure("Please set a valid profile gender to register for collective sports.");
+    const normalizedProfileCategory = normalizeProfileGenderToCategory(profile?.gender);
+    if (normalizedProfileCategory) {
+      // Logged-in user with a profile gender: lock to their gender.
+      details.gender = normalizedProfileCategory;
+    } else {
+      // Guest or profile without gender: use what was submitted.
+      const submittedGender = (parsed.data.registration_details?.gender ?? details.gender ?? "").trim().toLowerCase();
+      if (!submittedGender) {
+        return failure("Please select a gender category for this team sport.");
+      }
+      details.gender = submittedGender;
     }
-
-    const submittedCategory = (parsed.data.registration_details?.gender ?? details.gender ?? "").trim().toLowerCase();
-    if (submittedCategory && submittedCategory !== normalizedProfileCategory) {
-      return failure("Category is locked based on your profile gender.");
-    }
-
-    details.gender = normalizedProfileCategory;
   }
 
   const registrationTable = getSafeRegistrationTableFromSlug(parsed.data.activity_slug);
@@ -330,14 +329,18 @@ export async function createActivityRegistrationAction(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data: existingActivityRegistration } = await supabase
-    .from(registrationTable)
-    .select("id")
-    .eq("user_id", user.id)
-    .limit(1);
 
-  if ((existingActivityRegistration?.length ?? 0) > 0) {
-    return failure("You are already registered for this activity.");
+  // Only check for duplicate if the user is logged in (guests can't have duplicates).
+  if (user) {
+    const { data: existingActivityRegistration } = await supabase
+      .from(registrationTable)
+      .select("id")
+      .eq("user_id", user.id)
+      .limit(1);
+
+    if ((existingActivityRegistration?.length ?? 0) > 0) {
+      return failure("You are already registered for this activity.");
+    }
   }
 
   const resolvedEventState = await resolveActivityEventId(supabase, parsed.data.activity_slug, parsed.data.event_id);
@@ -346,8 +349,8 @@ export async function createActivityRegistrationAction(
   }
 
   const basePayload = {
-    user_id: user.id,
-    profile_id: user.id,
+    user_id: user?.id ?? null,
+    profile_id: user?.id ?? null,
     full_name: parsed.data.full_name,
     email: parsed.data.email,
     phone: parsed.data.phone,
@@ -417,29 +420,23 @@ export async function createActivityRegistrationAction(
     return failure(error.message);
   }
 
-  const cookieStore = await cookies();
-  cookieStore.delete(getRegistrationDraftCookieName(parsed.data.activity_slug));
-
   revalidateMany([`/register/${parsed.data.activity_slug}`, "/register", "/profile"]);
   revalidateAdminRegistrationPages();
-    return success("Registration submitted and saved successfully.");
-  } catch (error) {
-    console.error("createActivityRegistrationAction error:", error);
-    return failure(error instanceof Error ? error.message : "Failed to submit registration.");
-  }
+  return success("Registration submitted and saved successfully.");
 }
 
 export async function updateActivityRegistrationAction(
   _: ActionResponse,
   formData: FormData
 ): Promise<ActionResponse> {
-  try {
-    const user = await requireAuth();
-    const profile = await getCurrentProfile();
-    const registrationId = String(formData.get("registration_id") ?? "");
-    if (!registrationId) {
-      return failure("Missing registration id.");
-    }
+  // Update requires an authenticated user since only the owner can edit.
+  // requireAuth() must NOT be inside try/catch — its redirect() throw must propagate.
+  const user = await requireAuth();
+  const profile = await getCurrentProfile();
+  const registrationId = String(formData.get("registration_id") ?? "");
+  if (!registrationId) {
+    return failure("Missing registration id.");
+  }
 
   const { parsed, details } = parseActivityRegistrationPayload(formData);
   if (!parsed.success) {
@@ -456,18 +453,17 @@ export async function updateActivityRegistrationAction(
     return failure(detailsValidationError);
   }
 
-  const normalizedProfileCategory = normalizeProfileGenderToCategory(profile?.gender);
   if (parsed.data.category_type === "collective_sport") {
-    if (!normalizedProfileCategory) {
-      return failure("Please set a valid profile gender to register for collective sports.");
+    const normalizedProfileCategory = normalizeProfileGenderToCategory(profile?.gender);
+    if (normalizedProfileCategory) {
+      details.gender = normalizedProfileCategory;
+    } else {
+      const submittedGender = (parsed.data.registration_details?.gender ?? details.gender ?? "").trim().toLowerCase();
+      if (!submittedGender) {
+        return failure("Please select a gender category for this team sport.");
+      }
+      details.gender = submittedGender;
     }
-
-    const submittedCategory = (parsed.data.registration_details?.gender ?? details.gender ?? "").trim().toLowerCase();
-    if (submittedCategory && submittedCategory !== normalizedProfileCategory) {
-      return failure("Category is locked based on your profile gender.");
-    }
-
-    details.gender = normalizedProfileCategory;
   }
 
   const registrationTable = getSafeRegistrationTableFromSlug(parsed.data.activity_slug);
@@ -564,11 +560,7 @@ export async function updateActivityRegistrationAction(
 
   revalidateMany([`/register/${parsed.data.activity_slug}`, "/register", "/profile"]);
   revalidateAdminRegistrationPages();
-    return success("Registration updated successfully.");
-  } catch (error) {
-    console.error("updateActivityRegistrationAction error:", error);
-    return failure(error instanceof Error ? error.message : "Failed to update registration.");
-  }
+  return success("Registration updated successfully.");
 }
 
 export async function deleteActivityRegistrationAction(formData: FormData): Promise<void> {

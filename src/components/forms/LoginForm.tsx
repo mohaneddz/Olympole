@@ -97,7 +97,6 @@ export function LoginForm() {
     gender: initialDraft?.signup_gender ?? "male",
     school: initialDraft?.signup_school ?? "",
     year_of_study: initialDraft?.signup_year_of_study ?? "",
-    student_id: initialDraft?.signup_student_id ?? "",
     password: "",
   });
 
@@ -124,7 +123,6 @@ export function LoginForm() {
       signup_gender: signupForm.gender,
       signup_school: signupForm.school,
       signup_year_of_study: signupForm.year_of_study,
-      signup_student_id: signupForm.student_id,
     });
   }, [
     mode,
@@ -135,7 +133,6 @@ export function LoginForm() {
     signupForm.gender,
     signupForm.school,
     signupForm.year_of_study,
-    signupForm.student_id,
   ]);
 
   useEffect(() => {
@@ -268,31 +265,18 @@ export function LoginForm() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <InputField
-                    label="Phone Number"
-                    name="phone"
-                    required
-                    autoComplete="tel"
-                    placeholder="0551234567"
-                    icon={<Phone className="h-5 w-5" />}
-                    value={signupForm.phone}
-                    onChange={(value) => updateSignupField("phone", value)}
-                  />
-                  <p className="mt-1.5 text-xs text-cyan-200/60">Use exactly 10 digits starting with 0.</p>
-                </div>
-
+              <div>
                 <InputField
-                  label="Student ID"
-                  name="student_id"
+                  label="Phone Number"
+                  name="phone"
                   required
-                  autoComplete="off"
-                  placeholder="12 digits"
-                  icon={<UserRound className="h-5 w-5" />}
-                  value={signupForm.student_id}
-                  onChange={(value) => updateSignupField("student_id", value)}
+                  autoComplete="tel"
+                  placeholder="0551234567"
+                  icon={<Phone className="h-5 w-5" />}
+                  value={signupForm.phone}
+                  onChange={(value) => updateSignupField("phone", value)}
                 />
+                <p className="mt-1.5 text-xs text-cyan-200/60">Use exactly 10 digits starting with 0.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

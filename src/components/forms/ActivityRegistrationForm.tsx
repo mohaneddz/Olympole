@@ -9,10 +9,6 @@ import {
 } from "@/server/registrations";
 import type { RegistrationActivity } from "@/data/registration-activities";
 import type { ActionResponse } from "@/lib/actions";
-import {
-  clearClientRegistrationDraftCookie,
-  writeClientRegistrationDraftCookie,
-} from "@/lib/cookie-drafts";
 import { isValidPhoneInput, normalizePhoneInput } from "@/lib/phone";
 import {
   ACTIVITY_REGISTRATION_MAX_MOTIVATION,
@@ -163,42 +159,6 @@ export function ActivityRegistrationForm({
   }, [defaults, events]);
 
   useEffect(() => {
-    writeClientRegistrationDraftCookie(activity.slug, {
-      event_id: formState.event_id,
-      full_name: formState.full_name,
-      email: formState.email,
-      phone: formState.phone,
-      department_or_school: formState.department_or_school,
-      team_name: formState.team_name,
-      emergency_contact: formState.emergency_contact,
-      previous_experience: formState.previous_experience,
-      motivation: formState.motivation,
-      preferred_role: formState.preferred_role,
-      availability_date: formState.availability_date,
-      additional_notes: formState.additional_notes,
-      detail_gender: formState.detail_gender,
-      detail_competition_level: formState.detail_competition_level,
-      detail_running_distance: formState.detail_running_distance,
-      detail_joined_marathon_before: formState.detail_joined_marathon_before,
-      detail_participated_before: formState.detail_participated_before,
-      detail_elo_rating: formState.detail_elo_rating,
-      detail_talent_type: formState.detail_talent_type,
-      detail_talent_type_other: formState.detail_talent_type_other,
-      detail_performance_description: formState.detail_performance_description,
-      detail_writing_category: formState.detail_writing_category,
-      detail_art_category: formState.detail_art_category,
-      detail_strengths: formState.detail_strengths,
-      detail_schedule: formState.detail_schedule,
-    });
-  }, [activity.slug, formState]);
-
-  useEffect(() => {
-    if (actionState.ok) {
-      clearClientRegistrationDraftCookie(activity.slug);
-    }
-  }, [actionState.ok, activity.slug]);
-
-  useEffect(() => {
     if (!actionState.message) {
       return;
     }
@@ -272,9 +232,6 @@ export function ActivityRegistrationForm({
   function validateStep(stepIndex: number) {
     if (stepIndex === 0) {
       if (activity.category === "collective_sport") {
-        if (!lockedGenderCategory) {
-          return "Category is locked from your profile gender. Please complete your profile first.";
-        }
         const genderError = requireValue(formState.detail_gender, "Category");
         if (genderError) return genderError;
         if (activity.slug === "football" && formState.detail_gender !== "men") {
@@ -456,80 +413,112 @@ export function ActivityRegistrationForm({
         {activity.category === "collective_sport" ? (
           <label className={labelClassName}>
             <span>Category *</span>
-            <input type="hidden" name="detail_gender" value={formState.detail_gender} />
             <select
-              name="detail_gender_display"
+              name="detail_gender"
               required
               value={formState.detail_gender}
+              onChange={(event) => {
+                updateField("detail_gender", event.target.value);
+                markFieldTouched("detail_gender");
+              }}
+              onBlur={() => markFieldTouched("detail_gender")}
               className={getFieldClass("detail_gender", !formState.detail_gender.trim())}
-              disabled
+              disabled={isFormDisabled || (!!lockedGenderCategory && activity.slug === "football")}
             >
-              {!lockedGenderCategory ? (
-                <option value="">Set gender in your profile first</option>
-              ) : (
-                <>
-                  {lockedGenderCategory === "men" ? <option value="men">Men</option> : null}
-                  {lockedGenderCategory === "women" ? <option value="women">Women</option> : null}
-                </>
-              )}
+              <option value="">Select category</option>
+              {(!lockedGenderCategory || lockedGenderCategory === "men") && activity.slug !== "football" ? (
+                <option value="men">Men</option>
+              ) : null}
+              {activity.slug === "football" ? (
+                <option value="men">Men</option>
+              ) : null}
+              {(!lockedGenderCategory || lockedGenderCategory === "women") && activity.slug !== "football" ? (
+                <option value="women">Women</option>
+              ) : null}
             </select>
-            <p className="text-xs text-cyan-200/60 mt-1">Category is locked to your profile gender.</p>
+            {activity.slug === "football" ? (
+              <p className="text-xs text-cyan-200/60 mt-1">Football is currently limited to men's category.</p>
+            ) : null}
           </label>
         ) : null}
 
         <div className="grid grid-cols-1 gap-y-8 gap-x-6 md:grid-cols-2">
           <label className={labelClassName}>
-            <span>Full name</span>
-            <input type="hidden" name="full_name" value={formState.full_name} />
+            <span>Full name *</span>
             <input
-              name="full_name_display"
+              name="full_name"
               required
+              placeholder="Your full name"
               value={formState.full_name}
-              onChange={(event) => updateField("full_name", event.target.value)}
-              className={`${inputClassName} disabled:bg-[#0b1c44]/55`}
-              disabled
+              onChange={(event) => {
+                updateField("full_name", event.target.value);
+                markFieldTouched("full_name");
+              }}
+              onBlur={() => markFieldTouched("full_name")}
+              className={getFieldClass("full_name", !formState.full_name.trim())}
+              disabled={isFormDisabled}
             />
           </label>
           <label className={labelClassName}>
-            <span>Email (use school email if available)</span>
-            <input type="hidden" name="email" value={formState.email} />
+            <span>Email (use school email if available) *</span>
             <input
-              name="email_display"
+              name="email"
               required
               type="email"
+              placeholder="you@example.com"
               value={formState.email}
-              onChange={(event) => updateField("email", event.target.value)}
-              className={`${inputClassName} disabled:bg-[#0b1c44]/55`}
-              disabled
+              onChange={(event) => {
+                updateField("email", event.target.value);
+                markFieldTouched("email");
+              }}
+              onBlur={() => markFieldTouched("email")}
+              className={getFieldClass("email", !formState.email.trim())}
+              disabled={isFormDisabled}
             />
           </label>
         </div>
 
         <div className="grid grid-cols-1 gap-y-8 gap-x-6 md:grid-cols-2">
           <label className={labelClassName}>
-            <span>Phone</span>
-            <input type="hidden" name="phone" value={formState.phone} />
+            <span>Phone *</span>
             <input
-              name="phone_display"
+              name="phone"
               required
-              value={formState.phone}
-              className={`${inputClassName} disabled:bg-[#0b1c44]/55`}
               placeholder="e.g. 0551234567"
-              disabled
+              value={formState.phone}
+              onChange={(event) => {
+                updateField("phone", normalizePhoneFieldValue(event.target.value));
+                markFieldTouched("phone");
+              }}
+              onBlur={() => markFieldTouched("phone")}
+              className={getFieldClass("phone", !!formState.phone.trim() && !isValidPhoneInput(formState.phone))}
+              disabled={isFormDisabled}
             />
             <p className="text-xs text-cyan-200/60 mt-1">Use exactly 10 digits starting with 0 (example: 0551234567).</p>
           </label>
           <label className={labelClassName}>
-            <span>School / Institution</span>
-            <input type="hidden" name="department_or_school" value={formState.department_or_school} />
-            <input
-              name="department_or_school_display"
+            <span>School / Institution *</span>
+            <select
+              name="department_or_school"
               required
               value={formState.department_or_school}
-              onChange={(event) => updateField("department_or_school", event.target.value)}
-              className={`${inputClassName} disabled:bg-[#0b1c44]/55`}
-              disabled
-            />
+              onChange={(event) => {
+                updateField("department_or_school", event.target.value);
+                markFieldTouched("department_or_school");
+              }}
+              onBlur={() => markFieldTouched("department_or_school")}
+              className={getFieldClass("department_or_school", !formState.department_or_school.trim())}
+              disabled={isFormDisabled}
+            >
+              <option value="">Select school</option>
+              <option value="ENSIA">ENSIA</option>
+              <option value="NHSM">NHSM</option>
+              <option value="NSNN">NSNN</option>
+              <option value="ENSSA">ENSSA</option>
+              <option value="ENSCS">ENSCS</option>
+              <option value="ESI">ESI</option>
+              <option value="Others">Others</option>
+            </select>
           </label>
         </div>
 
