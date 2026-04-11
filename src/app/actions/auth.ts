@@ -27,10 +27,14 @@ const signupSchema = loginSchema.extend({
   password: z.string().min(6, "Password must be at least 6 characters long.").max(120),
 });
 
-async function redirectAfterAuth(userId: string) {
+async function redirectAfterAuth(userId: string, options?: { preferProfile?: boolean }) {
   const completion = await getProfileCompletionStatus(userId);
   if (!completion.ready) {
     redirect("/onboarding");
+  }
+
+  if (options?.preferProfile) {
+    redirect("/profile");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -120,7 +124,7 @@ export async function signUpAction(_: ActionResponse, formData: FormData): Promi
   }
 
   await syncAdminRole(signInResult.data.user);
-  await redirectAfterAuth(signInResult.data.user.id);
+  await redirectAfterAuth(signInResult.data.user.id, { preferProfile: true });
   return { ok: true, message: "" };
 }
 

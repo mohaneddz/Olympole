@@ -17,10 +17,7 @@ export default async function OnboardingPage() {
     && profile?.gender?.trim()
     && profile?.student_id?.trim()
   ) {
-    if (profile.role === "admin") {
-      redirect("/admin");
-    }
-    redirect("/");
+    redirect("/profile");
   }
 
   return (

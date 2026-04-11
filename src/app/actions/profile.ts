@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import sharp from "sharp";
 import { failure, success, type ActionResponse } from "@/lib/actions";
-import { getCurrentUserRoles, requireAuth } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import { PROFILE_DRAFT_COOKIE } from "@/lib/cookie-drafts";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -231,11 +231,6 @@ export async function completeProfileAction(_: ActionResponse, formData: FormDat
   }
 
   (await cookies()).delete(PROFILE_DRAFT_COOKIE);
-
-  const roles = await getCurrentUserRoles();
-  if (roles.includes("admin")) {
-    redirect("/admin");
-  }
 
   redirect("/profile");
 }
