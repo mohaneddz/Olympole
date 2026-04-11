@@ -258,12 +258,12 @@ export function PredictionTeamCanvas({ availablePlayers }: { availablePlayers: F
   }, [pickerOpenForPlayerId]);
 
   return (
-    <section id="team" className="space-y-8">
-      <div className="mx-auto max-w-4xl text-center space-y-4">
-        <h2 className="text-4xl md:text-5xl font-extrabold text-white">
+    <section id="team" className="space-y-5 md:space-y-8">
+      <div className="mx-auto max-w-4xl space-y-3 text-center md:space-y-4">
+        <h2 className="text-2xl font-extrabold text-white sm:text-3xl md:text-5xl">
           Create Your Football <span className="text-primary">Team</span>
         </h2>
-        <p className="text-base md:text-3xl text-white/85 max-w-3xl mx-auto">
+        <p className="mx-auto max-w-3xl text-sm text-white/85 sm:text-base md:text-3xl">
           Make the best team of actual Olympole Football players and get the best score possible
         </p>
 
@@ -271,20 +271,20 @@ export function PredictionTeamCanvas({ availablePlayers }: { availablePlayers: F
           <button
             type="button"
             onClick={() => setView("pitch")}
-            className={`rounded-xl py-3 text-lg font-bold transition ${view === "pitch" ? "bg-[#84d4e8] text-[#061a2d]" : "text-white"}`}
+            className={`rounded-xl py-2.5 text-sm font-bold transition sm:text-base md:py-3 md:text-lg ${view === "pitch" ? "bg-[#84d4e8] text-[#061a2d]" : "text-white"}`}
           >
             Pitch View
           </button>
           <button
             type="button"
             onClick={() => setView("list")}
-            className={`rounded-xl py-3 text-lg font-bold transition ${view === "list" ? "bg-[#84d4e8] text-[#061a2d]" : "text-white"}`}
+            className={`rounded-xl py-2.5 text-sm font-bold transition sm:text-base md:py-3 md:text-lg ${view === "list" ? "bg-[#84d4e8] text-[#061a2d]" : "text-white"}`}
           >
             List View
           </button>
         </div>
 
-        <div className="flex items-center justify-center text-sm text-cyan-100">
+        <div className="flex items-center justify-center text-xs text-cyan-100 md:text-sm">
           <span>{playerSummary}</span>
         </div>
       </div>
@@ -295,7 +295,7 @@ export function PredictionTeamCanvas({ availablePlayers }: { availablePlayers: F
           className={view === "pitch" ? "relative" : "absolute inset-0 opacity-0 pointer-events-none"}
           aria-hidden={view !== "pitch"}
         >
-          <div className="glass-card rounded-none border border-cyan-300/25 p-3 md:p-4">
+          <div className="glass-card rounded-none border border-cyan-300/25 p-2 md:p-4">
             <svg
               ref={svgRef}
               viewBox={`0 0 ${VIRTUAL_WIDTH} ${VIRTUAL_HEIGHT}`}
@@ -473,7 +473,7 @@ export function PredictionTeamCanvas({ availablePlayers }: { availablePlayers: F
       <div className="text-center">
         <button
           type="button"
-          className="min-w-72 rounded-2xl border border-cyan-300/80 bg-[#0e1b46] px-8 py-4 text-2xl font-bold text-white hover:bg-cyan-300 hover:text-[#081936] transition"
+          className="min-w-56 rounded-2xl border border-cyan-300/80 bg-[#0e1b46] px-6 py-3 text-lg font-bold text-white transition hover:bg-cyan-300 hover:text-[#081936] md:min-w-72 md:px-8 md:py-4 md:text-2xl"
         >
           Save Your Team
         </button>

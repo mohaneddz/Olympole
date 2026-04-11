@@ -13,7 +13,7 @@ export function ActivitiesSection() {
         width={400}
         height={400}
         aria-hidden
-        className="pointer-events-none absolute -right-[6%] -top-[2%] h-auto w-40 opacity-100 md:w-90"
+        className="pointer-events-none absolute -right-[6%] -top-[2%] h-auto w-40 opacity-25 md:w-90 md:opacity-100"
       />
       <Image
         src="/svgs/artifacts/dashes.svg"
@@ -21,7 +21,7 @@ export function ActivitiesSection() {
         width={400}
         height={400}
         aria-hidden
-        className="pointer-events-none absolute right-[34%] top-[4%] h-auto w-20 opacity-100 md:w-50"
+        className="pointer-events-none absolute right-[34%] top-[4%] h-auto w-20 opacity-20 md:w-50 md:opacity-100"
       />
       <Image
         src="/svgs/artifacts/small-circles.svg"
@@ -29,7 +29,7 @@ export function ActivitiesSection() {
         width={400}
         height={400}
         aria-hidden
-        className="pointer-events-none absolute left-[26%] top-[4%] h-auto w-20 opacity-100 md:w-70"
+        className="pointer-events-none absolute left-[26%] top-[4%] h-auto w-20 opacity-20 md:w-70 md:opacity-100"
       />
       <Image
         src="/svgs/artifacts/big-circles.svg"
@@ -37,7 +37,7 @@ export function ActivitiesSection() {
         width={400}
         height={400}
         aria-hidden
-        className="pointer-events-none absolute -left-[6%] right-[12%] h-auto w-20 opacity-100 md:w-70"
+        className="pointer-events-none absolute -left-[6%] right-[12%] h-auto w-20 opacity-20 md:w-70 md:opacity-100"
       />
       <Image
         src="/svgs/artifacts/blue-zigzag.svg"
@@ -45,7 +45,7 @@ export function ActivitiesSection() {
         width={400}
         height={400}
         aria-hidden
-        className="pointer-events-none absolute -left-[6%] -bottom-[5%] h-auto w-20 opacity-100 md:w-70"
+        className="pointer-events-none absolute -left-[6%] -bottom-[5%] h-auto w-20 opacity-25 md:w-70 md:opacity-100"
       />
       <Image
         src="/svgs/artifacts/blue-zigzag.svg"
@@ -53,7 +53,7 @@ export function ActivitiesSection() {
         width={400}
         height={400}
         aria-hidden
-        className="pointer-events-none absolute -right-[6%] top-[30%] h-auto w-20 opacity-100 md:w-70"
+        className="pointer-events-none absolute -right-[6%] top-[30%] h-auto w-20 opacity-20 md:w-70 md:opacity-100"
       />
       <Image
         src="/svgs/artifacts/yellow-zigzag.svg"
@@ -61,7 +61,7 @@ export function ActivitiesSection() {
         width={400}
         height={400}
         aria-hidden
-        className="pointer-events-none absolute -right-[5%] top-[40%] h-auto w-20 opacity-100 md:w-50"
+        className="pointer-events-none absolute -right-[5%] top-[40%] h-auto w-20 opacity-25 md:w-50 md:opacity-100"
       />
 
       <div className="container relative z-20 mx-auto w-full max-w-7xl px-4">
