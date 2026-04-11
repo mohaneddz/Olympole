@@ -37,8 +37,8 @@ export function HeroSection() {
 
       <div className="container relative z-10 mx-auto flex w-full flex-col items-center justify-center gap-4 px-4 text-center">
 
-        <Image src="/images/brand/fire.png" height={1024} width={1024} alt="" className="w-80 h-auto mx-auto" />
-        <Image src="/images/brand/circles.png" height={1024} width={1024} alt="" className="w-48 h-auto mx-auto mb-6" />
+        <Image src="/images/brand/fire.webp" height={1024} width={1024} alt="" className="w-80 h-auto mx-auto" />
+        <Image src="/images/brand/circles.webp" height={1024} width={1024} alt="" className="w-48 h-auto mx-auto mb-6" />
 
         <h1 className="font-extrabold tracking-tighter mb-6">
           <span className="text-6xl md:text-8xl lg:text-9xl text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60">
