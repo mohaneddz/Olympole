@@ -478,10 +478,10 @@ export function ActivityRegistrationForm({
               required
               value={formState.phone}
               className={`${inputClassName} disabled:bg-[#0b1c44]/55`}
-              placeholder="e.g. 0696451419"
+              placeholder="e.g. 0551234567"
               disabled
             />
-            <p className="text-xs text-cyan-200/60 mt-1">Use exactly 10 digits starting with 0 (example: 0696451419).</p>
+            <p className="text-xs text-cyan-200/60 mt-1">Use exactly 10 digits starting with 0 (example: 0551234567).</p>
           </label>
           <label className={labelClassName}>
             <span>School / Institution</span>
@@ -845,7 +845,7 @@ export function ActivityRegistrationForm({
                 markFieldTouched("emergency_contact");
               }}
               onBlur={() => markFieldTouched("emergency_contact")}
-              placeholder="e.g. 0696451419"
+              placeholder="e.g. 0551234567"
               className={getFieldClass(
                 "emergency_contact",
                 !!formState.emergency_contact.trim() && !isValidPhoneInput(formState.emergency_contact)

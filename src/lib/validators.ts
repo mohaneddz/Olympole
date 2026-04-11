@@ -149,19 +149,12 @@ export const appSettingSchema = z.object({
 });
 
 export const profileCompletionSchema = z.object({
-  full_name: requiredText(2, 120, "Full name"),
-  school: z.preprocess(trimInput, z.enum(["ENSIA", "NHSM", "NHCS", "Others"])),
-  year_of_study: z.preprocess(trimInput, z.enum(["1", "2", "3", "4", "5", "other"])),
   gender: z.preprocess(trimInput, z.enum(["male", "female"])),
-  student_id: z.preprocess(
-    trimInput,
-    z.string().regex(/^\d{12}$/, "Student ID must be exactly 12 digits.")
-  ),
 });
 
 export const profileUpdateSchema = z.object({
   full_name: requiredText(2, 120, "Full name"),
-  school: z.preprocess(trimInput, z.enum(["ENSIA", "NHSM", "NHCS", "Others"])),
+  school: z.preprocess(trimInput, z.enum(["ENSIA", "NHSM", "NSNN", "ENSSA", "ENSCS", "ESI", "Others"])),
   year_of_study: z.preprocess(trimInput, z.enum(["1", "2", "3", "4", "5", "other"])),
   student_id: z.preprocess(
     trimInput,

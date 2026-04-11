@@ -133,7 +133,7 @@ export function ProfileHeaderCard({
 
       </div>
 
-      <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mt-7 hidden grid-cols-1 gap-3 sm:grid-cols-3 md:grid">
         <div className="rounded-2xl border border-cyan-300/20 bg-background/30 p-4">
           <p className="flex items-center gap-2 text-sm text-cyan-100/70">
             <CalendarCheck2 className="h-4 w-4 text-violet-300" />

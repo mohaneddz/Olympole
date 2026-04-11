@@ -5,10 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const socialLinks = [
-  { name: "Instagram", href: "https://instagram.com", icon: InstagramIcon },
-  { name: "LinkedIn", href: "https://linkedin.com", icon: LinkedInIcon },
-  { name: "Email", href: "mailto:escclub@example.com", icon: GmailIcon },
-  { name: "Facebook", href: "https://facebook.com", icon: FacebookIcon },
+  { name: "Instagram", href: "https://www.instagram.com/ensia.sport.culture.club/", icon: InstagramIcon },
+  { name: "LinkedIn", href: "https://www.linkedin.com/company/ensia-sports-culture-club/posts/?feedView=all", icon: LinkedInIcon },
+  { name: "Email", href: "mailto:escc@ensia.edu.dz", icon: GmailIcon },
+  { name: "TikTok", href: "https://www.tiktok.com/@escclub", icon: TiktokIcon },
 ];
 
 export function Footer() {
@@ -90,10 +90,11 @@ function GmailIcon({ className }: { className?: string }) {
   );
 }
 
-function FacebookIcon({ className }: { className?: string }) {
+function TiktokIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true" fill="currentColor">
-      <path d="M4.5 2h15A2.5 2.5 0 0 1 22 4.5v15a2.5 2.5 0 0 1-2.5 2.5h-6v-7.14h2.4l.36-2.78h-2.76v-1.78c0-.8.22-1.35 1.37-1.35h1.46V6.55A17.42 17.42 0 0 0 14.2 6c-2.07 0-3.48 1.26-3.48 3.58v2.03H8.35v2.78h2.37V22H4.5A2.5 2.5 0 0 1 2 19.5v-15A2.5 2.5 0 0 1 4.5 2Z" />
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
     </svg>
   );
 }
+

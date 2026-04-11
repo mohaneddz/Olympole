@@ -10,6 +10,11 @@ type ScheduleClientProps = {
 };
 
 type TabType = "Collective Sports" | "Individual Sports" | "Cultural Events";
+const scheduleTabs: { key: TabType; mobileLabel: string }[] = [
+  { key: "Collective Sports", mobileLabel: "Collective" },
+  { key: "Individual Sports", mobileLabel: "Individual" },
+  { key: "Cultural Events", mobileLabel: "Cultural" },
+];
 
 function formatDateHeader(dateStr: string) {
   const d = new Date(dateStr);
@@ -147,18 +152,17 @@ export default function ScheduleClient({ events }: ScheduleClientProps) {
 
       <div className="w-full bg-background pt-16">
         <div className="relative z-20 mb-20 flex justify-center px-4">
-          <div className="grid w-full max-w-xl grid-cols-2 gap-1 rounded-[2rem] border-2 border-[#80d4ff] bg-[#1a2238] p-1 shadow-lg md:inline-flex md:w-auto md:max-w-none md:flex-wrap md:items-center md:justify-center">
-            {(["Collective Sports", "Individual Sports", "Cultural Events"] as TabType[]).map((tab, index) => (
+          <div className="grid w-full max-w-xl grid-cols-3 gap-1 rounded-[2rem] border-2 border-[#80d4ff] bg-[#1a2238] p-1 shadow-lg md:flex md:w-auto md:max-w-none md:justify-center">
+            {scheduleTabs.map(({ key, mobileLabel }) => (
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`rounded-full px-3 py-2.5 text-center text-xs font-bold tracking-wide transition-colors duration-300 sm:px-5 sm:text-sm md:px-10 md:py-3 md:text-base ${
-                  index === 2 ? "col-span-2 md:col-span-1" : ""
-                } ${
-                  activeTab === tab ? "bg-[#80d4ff] text-black" : "text-white hover:text-[#80d4ff]/80"
+                key={key}
+                onClick={() => setActiveTab(key)}
+                className={`flex min-h-[48px] w-full items-center justify-center rounded-full px-1.5 py-2 text-center text-[10px] font-bold leading-tight tracking-normal transition-colors duration-300 sm:text-[11px] md:min-h-0 md:px-10 md:py-3 md:text-base md:tracking-wide ${
+                  activeTab === key ? "bg-[#80d4ff] text-black" : "text-white hover:text-[#80d4ff]/80"
                 }`}
               >
-                {tab}
+                <span className="md:hidden">{mobileLabel}</span>
+                <span className="hidden md:inline">{key}</span>
               </button>
             ))}
           </div>

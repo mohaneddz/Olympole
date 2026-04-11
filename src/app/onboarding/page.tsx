@@ -23,11 +23,7 @@ export default async function OnboardingPage() {
   return (
     <div className="container mx-auto px-4 py-16 max-w-2xl flex-1">
       <ProfileCompletionForm
-        defaultName={profile?.full_name ?? draft?.full_name}
-        defaultSchool={profile?.school ?? draft?.school}
-        defaultYear={profile?.year_of_study ?? draft?.year_of_study}
         defaultGender={profile?.gender ?? draft?.gender}
-        defaultStudentId={profile?.student_id ?? draft?.student_id}
       />
     </div>
   );

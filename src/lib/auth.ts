@@ -89,6 +89,9 @@ export async function syncAdminRole(user: User) {
   const metadataUsername = typeof metadata.username === "string" ? metadata.username.trim() : "";
   const metadataPhone = typeof metadata.phone === "string" ? metadata.phone.trim() : "";
   const metadataBio = typeof metadata.bio === "string" ? metadata.bio.trim() : "";
+  const metadataSchool = typeof metadata.school === "string" ? metadata.school.trim() : "";
+  const metadataYear = typeof metadata.year_of_study === "string" ? metadata.year_of_study.trim() : "";
+  const metadataStudentId = typeof metadata.student_id === "string" ? metadata.student_id.trim() : "";
 
   const { error: profileError } = await supabase.from("profiles").upsert({
     id: user.id,
@@ -97,6 +100,9 @@ export async function syncAdminRole(user: User) {
     ...(metadataUsername ? { username: metadataUsername } : {}),
     ...(metadataPhone ? { phone: metadataPhone } : {}),
     ...(metadataBio ? { bio: metadataBio } : {}),
+    ...(metadataSchool ? { school: metadataSchool } : {}),
+    ...(metadataYear ? { year_of_study: metadataYear } : {}),
+    ...(metadataStudentId ? { student_id: metadataStudentId } : {}),
     role: isAdmin ? "admin" : "participant",
     last_seen_at: new Date().toISOString(),
   });

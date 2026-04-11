@@ -28,17 +28,7 @@ export default async function RegisterPage() {
   }
 
   if (!user) {
-    return (
-      <div className="container mx-auto flex min-h-screen max-w-4xl flex-1 items-center px-4 py-16">
-        <div className="w-full rounded-xl border border-card-border bg-card-bg/40 p-6 text-foreground/80">
-          You need an account first to register to activities.{" "}
-          <Link href="/login" className="text-primary underline-offset-4 hover:underline">
-            Login now
-          </Link>
-          .
-        </div>
-      </div>
-    );
+    redirect("/login");
   }
 
   if (!profile?.full_name || !profile?.school || !profile?.year_of_study || !profile?.student_id) {
