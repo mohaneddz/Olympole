@@ -1,9 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { assignRegistrationTeamAction, deleteRegistrationAdminAction } from "@/app/actions/admin-management";
-import { updateRegistrationStatusAction } from "@/app/actions/registrations";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import {
+  assignRegistrationTeamWithFeedbackAction,
+  deleteRegistrationAdminAction,
+  updateRegistrationStatusWithFeedbackAction,
+} from "@/server/registrations";
 import { AdminDataTable, type DataTableColumn } from "@/components/admin/AdminDataTable";
+import { MoreHorizontal, X } from "lucide-react";
+import type { ActionResponse } from "@/lib/actions";
 
 type RegistrationRow = {
   id: string;
@@ -13,7 +18,7 @@ type RegistrationRow = {
   category_type: "collective_sport" | "individual_sport" | "culture";
   user_id: string | null;
   profile_id: string | null;
-  event_id: string;
+  event_id: string | null;
   event_title: string | null;
   event_starts_at: string | null;
   full_name: string;
@@ -44,6 +49,128 @@ type TeamOption = {
   sport_name: string;
 };
 
+function RegistrationActionsDialog({
+  row,
+  teams,
+  onToast,
+}: {
+  row: RegistrationRow;
+  teams: TeamOption[];
+  onToast: (state: ActionResponse) => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const initialActionState: ActionResponse = { ok: false, message: "" };
+  const [statusState, statusFormAction] = useActionState(updateRegistrationStatusWithFeedbackAction, initialActionState);
+  const [teamState, teamFormAction] = useActionState(assignRegistrationTeamWithFeedbackAction, initialActionState);
+  const supportsTeamAssignment = ["football", "basketball", "handball", "volleyball", "knowledge-cup"].includes(
+    row.activity_slug
+  );
+
+  useEffect(() => {
+    if (statusState.message) {
+      onToast(statusState);
+    }
+  }, [statusState, onToast]);
+
+  useEffect(() => {
+    if (teamState.message) {
+      onToast(teamState);
+    }
+  }, [teamState, onToast]);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => dialogRef.current?.showModal()}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-300/40 text-cyan-100 transition hover:bg-cyan-400/15"
+        title="Registration actions"
+        aria-label="Registration actions"
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+
+      <dialog
+        ref={dialogRef}
+        className="fixed left-1/2 top-1/2 w-[min(92vw,34rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-cyan-300/30 bg-[linear-gradient(160deg,rgba(10,22,54,0.97),rgba(6,13,34,0.98))] p-0 text-cyan-50 shadow-2xl backdrop:bg-black/60"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) {
+            dialogRef.current?.close();
+          }
+        }}
+      >
+        <div className="space-y-4 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-cyan-200/70">Registration Actions</p>
+              <p className="font-semibold">{row.full_name}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => dialogRef.current?.close()}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-300/40 text-cyan-100 hover:bg-cyan-400/15"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <form action={statusFormAction} className="flex items-center gap-2">
+            <input type="hidden" name="id" value={row.id} />
+            <input type="hidden" name="registration_table" value={row.registration_table} />
+            <select
+              name="status"
+              defaultValue={row.status}
+              className="h-9 flex-1 rounded-lg border border-card-border bg-background px-2 text-sm"
+            >
+              <option value="pending">pending</option>
+              <option value="approved">approved</option>
+              <option value="rejected">rejected</option>
+            </select>
+            <button className="rounded-lg border border-card-border px-3 py-2 text-sm">Apply</button>
+          </form>
+
+          {supportsTeamAssignment ? (
+            <form action={teamFormAction} className="flex items-center gap-2">
+              <input type="hidden" name="registration_id" value={row.id} />
+              <input type="hidden" name="registration_table" value={row.registration_table} />
+              <input type="hidden" name="membership_role" value="player" />
+              <select
+                name="team_id"
+                defaultValue={row.team_id ?? ""}
+                className="h-9 flex-1 rounded-lg border border-card-border bg-background px-2 text-sm"
+              >
+                <option value="">No team</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name} ({team.sport_name})
+                  </option>
+                ))}
+              </select>
+              <button className="rounded-lg border border-card-border px-3 py-2 text-sm">Assign</button>
+            </form>
+          ) : null}
+
+          <div className="rounded-xl border border-card-border/70 p-3 text-sm text-foreground/80">
+            <p><span className="font-semibold">Phone:</span> {row.phone || "-"}</p>
+            <p><span className="font-semibold">School:</span> {row.department_or_school || "-"}</p>
+            <p><span className="font-semibold">Experience:</span> {row.previous_experience || "-"}</p>
+            <p><span className="font-semibold">Motivation:</span> {row.motivation || "-"}</p>
+          </div>
+
+          <form action={deleteRegistrationAdminAction} className="pt-1">
+            <input type="hidden" name="registration_id" value={row.id} />
+            <input type="hidden" name="registration_table" value={row.registration_table} />
+            <button className="rounded-lg border border-red-500/60 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10">
+              Delete
+            </button>
+          </form>
+        </div>
+      </dialog>
+    </>
+  );
+}
+
 function formatDate(value: string | null) {
   if (!value) return "-";
   const date = new Date(value);
@@ -64,18 +191,27 @@ function columnsForActivity(slug: string): DataTableColumn<RegistrationRow>[] {
         </div>
       ),
     },
+    { key: "status", label: "Status", sortable: true },
     {
-      key: "event_title",
-      label: "Event",
+      key: "previous_experience",
+      label: "Experience",
       sortable: true,
       render: (row) => (
-        <div>
-          <p>{row.event_title ?? "-"}</p>
-          <p className="text-xs text-foreground/60">{formatDate(row.event_starts_at)}</p>
-        </div>
+        <p className="max-w-xs truncate" title={row.previous_experience ?? "-"}>
+          {row.previous_experience ?? "-"}
+        </p>
       ),
     },
-    { key: "status", label: "Status", sortable: true },
+    {
+      key: "motivation",
+      label: "Motivation",
+      sortable: true,
+      render: (row) => (
+        <p className="max-w-xs truncate" title={row.motivation ?? "-"}>
+          {row.motivation ?? "-"}
+        </p>
+      ),
+    },
   ];
 
   if (["football", "basketball", "handball", "volleyball"].includes(slug)) {
@@ -150,6 +286,7 @@ export function AdminCategoryRegistrationsDashboard({
   teams: TeamOption[];
 }) {
   const [activeSlug, setActiveSlug] = useState(activityTabs[0]?.slug ?? "");
+  const [toast, setToast] = useState<ActionResponse | null>(null);
 
   const visibleRows = useMemo(
     () => rows.filter((row) => row.activity_slug === activeSlug),
@@ -161,8 +298,31 @@ export function AdminCategoryRegistrationsDashboard({
     [activeSlug]
   );
 
+  useEffect(() => {
+    if (!toast?.message) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setToast(null), toast.ok ? 2500 : 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
+
   return (
     <div className="space-y-5">
+      {toast?.message ? (
+        <div
+          className={`fixed right-4 top-24 z-[9999] max-w-sm rounded-xl border px-4 py-3 text-sm shadow-2xl backdrop-blur-sm ${
+            toast.ok
+              ? "border-green-400/45 bg-green-500/20 text-green-100"
+              : "border-red-400/45 bg-red-500/20 text-red-100"
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          {toast.message}
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap gap-2">
         {activityTabs.map((tab) => {
           const isActive = tab.slug === activeSlug;
@@ -186,8 +346,8 @@ export function AdminCategoryRegistrationsDashboard({
       <AdminDataTable
         title={`${title} - ${activityTabs.find((tab) => tab.slug === activeSlug)?.title ?? ""}`}
         rows={visibleRows}
-        searchPlaceholder="Search by participant, event, role..."
-        searchKeys={["full_name", "email", "event_title", "preferred_role", "team_name"]}
+        searchPlaceholder="Search by participant, role, team..."
+        searchKeys={["full_name", "email", "preferred_role", "team_name", "previous_experience", "motivation"]}
         filters={[
           {
             key: "status",
@@ -200,63 +360,7 @@ export function AdminCategoryRegistrationsDashboard({
           },
         ]}
         columns={currentColumns}
-        renderActions={(row) => (
-          <div className="space-y-2">
-            <form action={updateRegistrationStatusAction} className="flex items-center gap-2">
-              <input type="hidden" name="id" value={row.id} />
-              <input type="hidden" name="registration_table" value={row.registration_table} />
-              <select
-                name="status"
-                defaultValue={row.status}
-                className="h-9 rounded-lg border border-card-border bg-background px-2 text-xs"
-              >
-                <option value="pending">pending</option>
-                <option value="approved">approved</option>
-                <option value="rejected">rejected</option>
-              </select>
-              <button className="rounded-lg border border-card-border px-2 py-1 text-xs">Apply</button>
-            </form>
-
-            {["football", "basketball", "handball", "volleyball", "knowledge-cup"].includes(row.activity_slug) ? (
-              <form action={assignRegistrationTeamAction} className="flex items-center gap-2">
-                <input type="hidden" name="registration_id" value={row.id} />
-                <input type="hidden" name="registration_table" value={row.registration_table} />
-                <input type="hidden" name="membership_role" value="player" />
-                <select
-                  name="team_id"
-                  defaultValue={row.team_id ?? ""}
-                  className="h-9 max-w-44 rounded-lg border border-card-border bg-background px-2 text-xs"
-                >
-                  <option value="">No team</option>
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name} ({team.sport_name})
-                    </option>
-                  ))}
-                </select>
-                <button className="rounded-lg border border-card-border px-2 py-1 text-xs">Assign</button>
-              </form>
-            ) : null}
-
-            <details className="rounded-lg border border-card-border/70 p-2 text-xs">
-              <summary className="cursor-pointer text-foreground/85">View details</summary>
-              <div className="mt-2 space-y-1 text-foreground/70">
-                <p><span className="font-semibold">Phone:</span> {row.phone || "-"}</p>
-                <p><span className="font-semibold">School:</span> {row.department_or_school || "-"}</p>
-                <p><span className="font-semibold">Experience:</span> {row.previous_experience || "-"}</p>
-                <p><span className="font-semibold">Motivation:</span> {row.motivation || "-"}</p>
-              </div>
-            </details>
-
-            <form action={deleteRegistrationAdminAction}>
-              <input type="hidden" name="registration_id" value={row.id} />
-              <input type="hidden" name="registration_table" value={row.registration_table} />
-              <button className="rounded-lg border border-red-500/60 px-2 py-1 text-xs text-red-300">
-                Delete
-              </button>
-            </form>
-          </div>
-        )}
+        renderActions={(row) => <RegistrationActionsDialog row={row} teams={teams} onToast={setToast} />}
       />
     </div>
   );

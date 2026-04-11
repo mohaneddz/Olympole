@@ -57,7 +57,7 @@ export default async function ProfilePage() {
 
     return {
       id: registration.id,
-      title: registration.event_title ?? "Unknown event",
+      title: registration.activity_title || registration.activity_slug || "Unknown activity",
       statusLabel: registration.status === "approved" ? "Accepted" : "Pending",
       activityType: registration.category_type,
     };

@@ -1,11 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import {
-  deleteLiveStreamAction,
-  updateLiveStreamDetailsAction,
-  updateLiveStreamStatusAction,
-} from "@/app/actions/events";
+import { deleteLiveStreamAction } from "@/server/live-streams";
 import { AdminDataTable } from "@/components/admin/AdminDataTable";
 import { LiveStreamFormDialog } from "@/components/admin/LiveStreamFormDialog";
 import { Trash2 } from "lucide-react";
@@ -22,14 +17,6 @@ type LiveStreamRow = {
   event_id: string | null;
   event_title: string | null;
 };
-
-function toDateTimeLocalValue(value: string | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const offsetMs = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
-}
 
 function formatDate(value: string | null) {
   if (!value) return "-";
