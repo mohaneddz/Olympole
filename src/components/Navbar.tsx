@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { getCurrentProfile } from "@/lib/auth";
 
 const navItems = [
   { name: "Sports", href: "/sports" },
@@ -11,15 +10,13 @@ const navItems = [
   { name: "Fantasy", href: "/predictions" },
 ];
 
-export async function Navbar() {
-  const profile = await getCurrentProfile();
-
+export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full overflow-visible bg-[linear-gradient(90deg,rgba(2,22,56,0.68),rgba(0,40,92,0.72),rgba(2,22,56,0.68))] shadow-lg backdrop-blur-xl">
       <div className="relative mx-auto flex min-h-20 w-full max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
         <Link href="/" className="relative z-10 flex min-w-0 items-center gap-3">
           <Image
-            src="/images/brand/esc.png"
+            src="/images/brand/esc.webp"
             alt="ESC Club logo"
             width={52}
             height={52}
@@ -45,18 +42,9 @@ export async function Navbar() {
         </nav>
 
         <div className="relative z-10 ml-auto hidden items-center md:flex">
-          {profile ? (
-            <Button variant="neonPill" size="pill" asChild>
-              <Link href="/profile">Profile</Link>
-            </Button>
-          ) : (
-            <Link
-              href="/login"
-              className="inline-flex h-10 items-center justify-center rounded-full border border-cyan-300/55 bg-transparent px-5 text-sm font-semibold tracking-[0.08em] text-cyan-50/90 transition-colors hover:bg-cyan-300/10 hover:text-white lg:text-base"
-            >
-              Sign in
-            </Link>
-          )}
+          <Button variant="neonPill" size="pill" asChild>
+            <Link href="/profile">Profile</Link>
+          </Button>
         </div>
 
         <details className="relative z-20 ml-auto md:hidden">
@@ -82,18 +70,9 @@ export async function Navbar() {
               ))}
             </nav>
             <div className="border-t border-cyan-300/25 p-2">
-              {profile ? (
-                <Button variant="neonPill" asChild className="h-10 w-full px-4 text-base">
-                  <Link href="/profile">Profile</Link>
-                </Button>
-              ) : (
-                <Link
-                  href="/login"
-                  className="block rounded-xl border border-cyan-300/55 bg-transparent px-4 py-3 text-center text-base font-semibold tracking-[0.08em] text-cyan-50/90 transition-colors hover:bg-cyan-300/10 hover:text-white"
-                >
-                  Sign in
-                </Link>
-              )}
+              <Button variant="neonPill" asChild className="h-10 w-full px-4 text-base">
+                <Link href="/profile">Profile</Link>
+              </Button>
             </div>
           </div>
         </details>

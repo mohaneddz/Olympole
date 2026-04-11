@@ -28,7 +28,7 @@ export function Footer() {
 
       <div className="relative z-10 mx-auto flex min-h-64 w-full max-w-7xl flex-col items-center justify-center px-4 py-6 text-center sm:px-6 sm:py-8">
         <Image
-          src="/images/brand/esc.png"
+          src="/images/brand/esc.webp"
           alt="ESC Club logo"
           width={84}
           height={84}
