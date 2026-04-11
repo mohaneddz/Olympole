@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
   ArrowRight,
   AtSign,
+  ChevronDown,
   Eye,
   EyeOff,
   KeyRound,
@@ -14,6 +15,11 @@ import {
   UserRound,
 } from "lucide-react";
 import { signInAction, signUpAction } from "@/app/actions/auth";
+import {
+  clearClientAuthDraftCookie,
+  readClientAuthDraftCookie,
+  writeClientAuthDraftCookie,
+} from "@/lib/cookie-drafts";
 
 const initialState = { ok: false, message: "" };
 
@@ -31,6 +37,10 @@ type FieldProps = {
   onChange?: (value: string) => void;
   rightSlot?: React.ReactNode;
 };
+
+function getInitialAuthDraft() {
+  return readClientAuthDraftCookie();
+}
 
 function InputField({
   label,
@@ -68,23 +78,25 @@ function InputField({
 }
 
 export function LoginForm() {
+  const initialDraft = getInitialAuthDraft();
   const [signInState, signInFormAction, signingIn] = useActionState(signInAction, initialState);
   const [signUpState, signUpFormAction, signingUp] = useActionState(signUpAction, initialState);
-  const [mode, setMode] = useState<AuthMode>("signup");
+  const [mode, setMode] = useState<AuthMode>(initialDraft?.mode === "login" ? "login" : "signup");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
 
   const [loginForm, setLoginForm] = useState({
-    email: "",
+    email: initialDraft?.login_email ?? "",
     password: "",
   });
 
   const [signupForm, setSignupForm] = useState({
-    full_name: "",
-    username: "",
-    email: "",
-    phone: "",
-    bio: "",
+    full_name: initialDraft?.signup_full_name ?? "",
+    email: initialDraft?.signup_email ?? "",
+    phone: initialDraft?.signup_phone ?? "",
+    school: initialDraft?.signup_school ?? "",
+    year_of_study: initialDraft?.signup_year_of_study ?? "",
+    student_id: initialDraft?.signup_student_id ?? "",
     password: "",
   });
 
@@ -101,6 +113,36 @@ export function LoginForm() {
     setSignupForm((current) => ({ ...current, [name]: value }));
   };
 
+  useEffect(() => {
+    writeClientAuthDraftCookie({
+      mode,
+      login_email: loginForm.email,
+      signup_full_name: signupForm.full_name,
+      signup_email: signupForm.email,
+      signup_phone: signupForm.phone,
+      signup_school: signupForm.school,
+      signup_year_of_study: signupForm.year_of_study,
+      signup_student_id: signupForm.student_id,
+    });
+  }, [
+    mode,
+    loginForm.email,
+    signupForm.full_name,
+    signupForm.email,
+    signupForm.phone,
+    signupForm.school,
+    signupForm.year_of_study,
+    signupForm.student_id,
+  ]);
+
+  useEffect(() => {
+    if (!signInState.ok && !signUpState.ok) {
+      return;
+    }
+
+    clearClientAuthDraftCookie();
+  }, [signInState.ok, signUpState.ok]);
+
   return (
     <section className="rounded-[32px] border border-cyan-300/25 bg-[linear-gradient(145deg,rgba(5,13,35,0.9),rgba(3,9,26,0.88))] px-5 py-6 shadow-[0_25px_80px_rgba(0,0,0,0.45),0_0_0_1px_rgba(34,211,238,0.14)] backdrop-blur-sm md:px-8 md:py-8">
       <div className="mx-auto max-w-2xl space-y-6">
@@ -108,9 +150,9 @@ export function LoginForm() {
           <p className="mx-auto mb-4 inline-flex items-center rounded-full border border-cyan-300/30 bg-cyan-300/10 px-4 py-1 text-xs font-bold tracking-[0.24em] text-cyan-100">
             AUTH PORTAL
           </p>
-          <h1 className="text-4xl font-black uppercase tracking-wide text-white md:text-7xl">Olympole Access</h1>
-          <p className="mt-3 text-[17px] text-cyan-100/70 md:text-[32px]">
-            Your cyber-stadium. Your competitions. All in one place.
+          <h1 className="text-4xl font-black uppercase tracking-wide text-white md:text-5xl lg:text-6xl">Olympole Account</h1>
+          <p className="mt-3 text-[16px] text-cyan-100/70 md:text-2xl">
+            Sign in once and participate everywhere (takes one minute)
           </p>
         </header>
 
@@ -197,72 +239,114 @@ export function LoginForm() {
             ) : null}
             </form>
           ) : (
-            <form action={signUpFormAction} className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <InputField
-                label="Full Name"
-                name="full_name"
-                required
-                autoComplete="name"
-                placeholder="Your full name"
-                icon={<UserRound className="h-5 w-5" />}
-                value={signupForm.full_name}
-                onChange={(value) => updateSignupField("full_name", value)}
-              />
-              <InputField
-                label="Username (Optional)"
-                name="username"
-                autoComplete="username"
-                placeholder="username"
-                icon={<UserRound className="h-5 w-5" />}
-                value={signupForm.username}
-                onChange={(value) => updateSignupField("username", value)}
-              />
-            </div>
+            <form action={signUpFormAction} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <InputField
+                  label="Full Name"
+                  name="full_name"
+                  required
+                  autoComplete="name"
+                  placeholder="Your full name"
+                  icon={<UserRound className="h-5 w-5" />}
+                  value={signupForm.full_name}
+                  onChange={(value) => updateSignupField("full_name", value)}
+                />
 
-            <InputField
-              label="Email Address"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="you@example.com"
-              icon={<AtSign className="h-5 w-5" />}
-              value={signupForm.email}
-              onChange={(value) => updateSignupField("email", value)}
-            />
-
-            <InputField
-              label="Phone Number"
-              name="phone"
-              required
-              autoComplete="tel"
-              placeholder="0696451419"
-              icon={<Phone className="h-5 w-5" />}
-              value={signupForm.phone}
-              onChange={(value) => updateSignupField("phone", value)}
-            />
-            <p className="-mt-3 mb-3 text-xs text-cyan-200/60">Use exactly 10 digits starting with 0 (example: 0696451419).</p>
-
-            <label className="block space-y-1.5">
-              <span className="text-sm font-semibold text-cyan-100/90">Bio (Optional)</span>
-              <div className="relative">
-                <div className="pointer-events-none absolute left-3 top-4 text-cyan-100/60">
-                  <Sparkles className="h-5 w-5" />
-                </div>
-                <textarea
-                  name="bio"
-                  maxLength={400}
-                  placeholder="Tell us a bit about yourself"
-                  value={signupForm.bio}
-                  onChange={(event) => updateSignupField("bio", event.target.value)}
-                  className="min-h-[96px] w-full resize-y rounded-xl border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(18,31,58,0.88),rgba(9,17,38,0.88))] pl-10 pr-3 pt-3 text-cyan-50 placeholder:text-cyan-100/35 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/20"
+                <InputField
+                  label="Email Address"
+                  name="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  icon={<AtSign className="h-5 w-5" />}
+                  value={signupForm.email}
+                  onChange={(value) => updateSignupField("email", value)}
                 />
               </div>
-            </label>
 
-            <InputField
-              label="Password"
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <InputField
+                    label="Phone Number"
+                    name="phone"
+                    required
+                    autoComplete="tel"
+                    placeholder="0551234567"
+                    icon={<Phone className="h-5 w-5" />}
+                    value={signupForm.phone}
+                    onChange={(value) => updateSignupField("phone", value)}
+                  />
+                  <p className="mt-1.5 text-xs text-cyan-200/60">Use exactly 10 digits starting with 0.</p>
+                </div>
+
+                <InputField
+                  label="Student ID"
+                  name="student_id"
+                  required
+                  autoComplete="off"
+                  placeholder="12 digits"
+                  icon={<UserRound className="h-5 w-5" />}
+                  value={signupForm.student_id}
+                  onChange={(value) => updateSignupField("student_id", value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-semibold text-cyan-100/90">School</span>
+                  <div className="relative">
+                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-cyan-100/60">
+                      <UserRound className="h-5 w-5" />
+                    </div>
+                    <select
+                      name="school"
+                      required
+                      value={signupForm.school}
+                      onChange={(event) => updateSignupField("school", event.target.value)}
+                      className="h-12 w-full appearance-none rounded-xl border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(18,31,58,0.88),rgba(9,17,38,0.88))] pl-10 pr-11 text-cyan-50 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/20"
+                    >
+                      <option value="" className="bg-[#0b1735]">Select school</option>
+                      <option value="ENSIA" className="bg-[#0b1735]">ENSIA</option>
+                      <option value="NHSM" className="bg-[#0b1735]">NHSM</option>
+                      <option value="NSNN" className="bg-[#0b1735]">NSNN</option>
+                      <option value="ENSSA" className="bg-[#0b1735]">ENSSA</option>
+                      <option value="ENSCS" className="bg-[#0b1735]">ENSCS</option>
+                      <option value="ESI" className="bg-[#0b1735]">ESI</option>
+                      <option value="Others" className="bg-[#0b1735]">Others</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-100/55" />
+                  </div>
+                </label>
+
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-semibold text-cyan-100/90">Year</span>
+                  <div className="relative">
+                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-cyan-100/60">
+                      <UserRound className="h-5 w-5" />
+                    </div>
+                    <select
+                      name="year_of_study"
+                      required
+                      value={signupForm.year_of_study}
+                      onChange={(event) => updateSignupField("year_of_study", event.target.value)}
+                      className="h-12 w-full appearance-none rounded-xl border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(18,31,58,0.88),rgba(9,17,38,0.88))] pl-10 pr-11 text-cyan-50 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/20"
+                    >
+                      <option value="" className="bg-[#0b1735]">Select year</option>
+                      <option value="1" className="bg-[#0b1735]">1</option>
+                      <option value="2" className="bg-[#0b1735]">2</option>
+                      <option value="3" className="bg-[#0b1735]">3</option>
+                      <option value="4" className="bg-[#0b1735]">4</option>
+                      <option value="5" className="bg-[#0b1735]">5</option>
+                      <option value="other" className="bg-[#0b1735]">other</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-100/55" />
+                  </div>
+                </label>
+              </div>
+
+              <InputField
+                label="Password"
               name="password"
               type={showSignupPassword ? "text" : "password"}
               required
@@ -307,13 +391,13 @@ export function LoginForm() {
           )}
         </div>
 
-        <div className="mt-2 flex items-center gap-3 text-cyan-100/55">
+        <div className="mt-2 hidden items-center gap-3 text-cyan-100/55 sm:flex">
           <span className="h-px flex-1 bg-cyan-300/20" />
-          <span className="text-sm">Why athletes choose Olympole</span>
+          <span className="text-sm">Why make an account</span>
           <span className="h-px flex-1 bg-cyan-300/20" />
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="hidden gap-3 sm:grid sm:grid-cols-3">
           <div className="rounded-2xl border border-cyan-300/18 bg-[#09142d]/75 p-4">
             <ShieldCheck className="mb-2 h-6 w-6 text-cyan-300" />
             <p className="text-base font-semibold text-cyan-50">Secure Access</p>
