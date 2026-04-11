@@ -237,12 +237,12 @@ export function LoginForm() {
               name="phone"
               required
               autoComplete="tel"
-              placeholder="+213555555555"
+              placeholder="0696451419"
               icon={<Phone className="h-5 w-5" />}
               value={signupForm.phone}
               onChange={(value) => updateSignupField("phone", value)}
             />
-            <p className="-mt-3 mb-3 text-xs text-cyan-200/60">Between 6 and 30 chars. Including spaces/symbols.</p>
+            <p className="-mt-3 mb-3 text-xs text-cyan-200/60">Use exactly 10 digits starting with 0 (example: 0696451419).</p>
 
             <label className="block space-y-1.5">
               <span className="text-sm font-semibold text-cyan-100/90">Bio (Optional)</span>

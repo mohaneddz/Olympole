@@ -2,9 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ComponentType } from "react";
-import {
-  updateMatchAction,
-} from "@/app/actions/events";
+import { updateMatchAction } from "@/server/matches";
 import {
   getEventIconComponent,
   getMatchIconKey,

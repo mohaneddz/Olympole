@@ -11,14 +11,16 @@ type Props = {
   defaultName?: string | null;
   defaultSchool?: string | null;
   defaultYear?: string | null;
+  defaultGender?: string | null;
   defaultStudentId?: string | null;
 };
 
-export function ProfileCompletionForm({ defaultName, defaultSchool, defaultYear, defaultStudentId }: Props) {
+export function ProfileCompletionForm({ defaultName, defaultSchool, defaultYear, defaultGender, defaultStudentId }: Props) {
   const [state, formAction, pending] = useActionState(completeProfileAction, initialState);
   const [fullName, setFullName] = useState(defaultName ?? "");
   const [school, setSchool] = useState(defaultSchool ?? "");
   const [year, setYear] = useState(defaultYear ?? "");
+  const [gender, setGender] = useState(defaultGender ?? "");
   const [studentId, setStudentId] = useState(defaultStudentId ?? "");
 
   useEffect(() => {
@@ -26,9 +28,10 @@ export function ProfileCompletionForm({ defaultName, defaultSchool, defaultYear,
       full_name: fullName,
       school,
       year_of_study: year,
+      gender,
       student_id: studentId,
     });
-  }, [fullName, school, year, studentId]);
+  }, [fullName, school, year, gender, studentId]);
 
   return (
     <form action={formAction} className="space-y-4 p-6 rounded-xl border border-card-border glass-card">
@@ -72,6 +75,18 @@ export function ProfileCompletionForm({ defaultName, defaultSchool, defaultYear,
         <option value="4">4</option>
         <option value="5">5</option>
         <option value="other">other</option>
+      </select>
+
+      <select
+        name="gender"
+        required
+        value={gender}
+        onChange={(event) => setGender(event.target.value)}
+        className="w-full h-11 px-3 rounded bg-background/60 border border-card-border"
+      >
+        <option value="">Select gender</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
       </select>
 
       <input

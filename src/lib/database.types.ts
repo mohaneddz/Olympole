@@ -17,6 +17,7 @@ export interface Database {
           email: string;
           school: string | null;
           year_of_study: string | null;
+          gender: string | null;
           student_id: string | null;
           role: AppRole;
           created_at: string;
@@ -28,6 +29,7 @@ export interface Database {
           email: string;
           school?: string | null;
           year_of_study?: string | null;
+          gender?: string | null;
           student_id?: string | null;
           role?: AppRole;
           created_at?: string;
@@ -38,6 +40,7 @@ export interface Database {
           email?: string;
           school?: string | null;
           year_of_study?: string | null;
+          gender?: string | null;
           student_id?: string | null;
           role?: AppRole;
           updated_at?: string;

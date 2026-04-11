@@ -15,8 +15,13 @@ function isMissingTableError(message: string, tableName: string) {
 
 export const getCurrentUser = cache(async () => {
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getUser();
-  return data.user;
+  try {
+    const { data } = await supabase.auth.getUser();
+    return data.user;
+  } catch (error) {
+    console.error("getCurrentUser error:", error);
+    return null;
+  }
 });
 
 export const getCurrentProfile = cache(async () => {
@@ -26,13 +31,18 @@ export const getCurrentProfile = cache(async () => {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+  try {
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
 
-  return data;
+    return data;
+  } catch (error) {
+    console.error("getCurrentProfile error:", error);
+    return null;
+  }
 });
 
 export const getCurrentUserRoles = cache(async () => {
@@ -42,23 +52,28 @@ export const getCurrentUserRoles = cache(async () => {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("profile_roles")
-    .select("role_name")
-    .eq("profile_id", user.id);
+  try {
+    const { data, error } = await supabase
+      .from("profile_roles")
+      .select("role_name")
+      .eq("profile_id", user.id);
 
-  if (error) {
-    // Backward compatible fallback for older schema state.
-    const profile = await getCurrentProfile();
-    return profile?.role ? [profile.role] : [];
+    if (error) {
+      // Backward compatible fallback for older schema state.
+      const profile = await getCurrentProfile();
+      return profile?.role ? [profile.role] : [];
+    }
+
+    if (!data?.length) {
+      const profile = await getCurrentProfile();
+      return profile?.role ? [profile.role] : [];
+    }
+
+    return data.map((row) => row.role_name);
+  } catch (error) {
+    console.error("getCurrentUserRoles error:", error);
+    return [] as string[];
   }
-
-  if (!data?.length) {
-    const profile = await getCurrentProfile();
-    return profile?.role ? [profile.role] : [];
-  }
-
-  return data.map((row) => row.role_name);
 });
 
 export async function isCurrentUserAdmin() {
@@ -115,7 +130,7 @@ export async function getProfileCompletionStatus(userId: string) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("full_name, school, year_of_study, student_id")
+    .select("full_name, school, year_of_study, gender, student_id")
     .eq("id", userId)
     .single();
 
@@ -129,8 +144,9 @@ export async function getProfileCompletionStatus(userId: string) {
   const hasName = Boolean(data?.full_name?.trim());
   const hasSchool = Boolean(data?.school?.trim());
   const hasYear = Boolean(data?.year_of_study?.trim());
+  const hasGender = Boolean(data?.gender?.trim());
   const hasStudentId = Boolean(data?.student_id?.trim());
-  return { ready: hasName && hasSchool && hasYear && hasStudentId };
+  return { ready: hasName && hasSchool && hasYear && hasGender && hasStudentId };
 }
 
 export async function requireAuth() {
