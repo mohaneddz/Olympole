@@ -18,12 +18,15 @@ export async function updateSettingAction(formData: FormData) {
 
   const parsed = appSettingSchema.safeParse({ key, value });
   if (!parsed.success) {
-    return;
+    return {
+      ok: false as const,
+      message: "Invalid setting payload.",
+    };
   }
 
   const supabase = await createSupabaseServerClient();
   const defaults = getDefaultAppSettings();
-  await supabase.from("website_config").upsert(
+  const { error } = await supabase.from("website_config").upsert(
     {
       id: 1,
       ...defaults,
@@ -32,11 +35,21 @@ export async function updateSettingAction(formData: FormData) {
     { onConflict: "id" }
   );
 
-  revalidatePath("/admin/settings");
+  if (error) {
+    return {
+      ok: false as const,
+      message: "Failed to update setting.",
+    };
+  }
+
   revalidatePath("/register");
   revalidatePath("/predictions");
   revalidatePath("/predictions/match");
   revalidatePath("/predictions/fantasy");
   revalidatePath("/culture/writing");
   revalidatePath("/live");
+
+  return {
+    ok: true as const,
+  };
 }
