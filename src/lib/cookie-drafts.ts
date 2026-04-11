@@ -1,5 +1,6 @@
 export const PROFILE_DRAFT_COOKIE = "olympole_profile_draft";
 export const REGISTRATION_DRAFT_COOKIE_PREFIX = "olympole_reg_draft_";
+const MAX_COOKIE_VALUE_CHARS = 1200;
 
 export type ProfileDraftCookie = {
   full_name?: string;
@@ -53,6 +54,59 @@ function safeStringify(value: unknown) {
   return encodeURIComponent(JSON.stringify(value));
 }
 
+function truncateText(value: unknown, max: number) {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  return value.length > max ? value.slice(0, max) : value;
+}
+
+function sanitizeRegistrationDraftForCookie(value: RegistrationDraftCookie) {
+  const sanitized: RegistrationDraftCookie = {
+    ...value,
+    full_name: truncateText(value.full_name, 120) as string | undefined,
+    email: truncateText(value.email, 254) as string | undefined,
+    phone: truncateText(value.phone, 32) as string | undefined,
+    department_or_school: truncateText(value.department_or_school, 120) as string | undefined,
+    team_name: truncateText(value.team_name, 120) as string | undefined,
+    emergency_contact: truncateText(value.emergency_contact, 120) as string | undefined,
+    preferred_role: truncateText(value.preferred_role, 120) as string | undefined,
+    availability_date: truncateText(value.availability_date, 64) as string | undefined,
+    // Keep draft cookies small to avoid oversized request headers breaking Server Actions.
+    previous_experience: undefined,
+    motivation: undefined,
+    additional_notes: undefined,
+    detail_performance_description: undefined,
+    detail_talent_type_other: truncateText(value.detail_talent_type_other, 120) as string | undefined,
+    detail_strengths: truncateText(value.detail_strengths, 120) as string | undefined,
+    detail_schedule: truncateText(value.detail_schedule, 120) as string | undefined,
+  };
+
+  let serialized = safeStringify(sanitized);
+  if (serialized.length <= MAX_COOKIE_VALUE_CHARS) {
+    return serialized;
+  }
+
+  const minimal: RegistrationDraftCookie = {
+    event_id: sanitized.event_id,
+    full_name: sanitized.full_name,
+    email: sanitized.email,
+    phone: sanitized.phone,
+    department_or_school: sanitized.department_or_school,
+    preferred_role: sanitized.preferred_role,
+    detail_gender: sanitized.detail_gender,
+    detail_running_distance: sanitized.detail_running_distance,
+    detail_elo_rating: sanitized.detail_elo_rating,
+    detail_talent_type: sanitized.detail_talent_type,
+    detail_writing_category: sanitized.detail_writing_category,
+    detail_art_category: sanitized.detail_art_category,
+  };
+
+  serialized = safeStringify(minimal);
+  return serialized.length <= MAX_COOKIE_VALUE_CHARS ? serialized : safeStringify({ event_id: sanitized.event_id });
+}
+
 export function getRegistrationDraftCookieName(activitySlug: string) {
   return `${REGISTRATION_DRAFT_COOKIE_PREFIX}${activitySlug}`;
 }
@@ -102,7 +156,7 @@ export function readClientRegistrationDraftCookie(activitySlug: string) {
 
 export function writeClientRegistrationDraftCookie(activitySlug: string, value: RegistrationDraftCookie) {
   const name = getRegistrationDraftCookieName(activitySlug);
-  writeClientCookie(name, safeStringify(value));
+  writeClientCookie(name, sanitizeRegistrationDraftForCookie(value));
 }
 
 export function clearClientRegistrationDraftCookie(activitySlug: string) {

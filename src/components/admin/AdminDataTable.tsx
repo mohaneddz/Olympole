@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import type { ReactNode } from "react";
-import { ArrowDownAZ, ArrowUpAZ, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowDownAZ, ArrowUpAZ, RefreshCw, Search } from "lucide-react";
 
 type Direction = "asc" | "desc";
 
@@ -70,6 +71,8 @@ export function AdminDataTable<Row extends { id: string }>({
   actionsLabel?: string;
   renderActions?: (row: Row) => ReactNode;
 }) {
+  const router = useRouter();
+  const [isRefreshing, startRefreshTransition] = useTransition();
   const resolvedPageSizeOptions = useMemo(() => {
     const safeMax = Math.max(1, maxRowsPerPage);
     const baseOptions = rowsPerPageOptions?.length ? rowsPerPageOptions : [10, 20, 40, 80];
@@ -169,8 +172,24 @@ export function AdminDataTable<Row extends { id: string }>({
     <section className="space-y-4 rounded-2xl border border-card-border bg-card-bg/60 p-4 md:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold">{title}</h2>
-        <div className="text-sm text-foreground/70">
-          {sortedRows.length} result{sortedRows.length === 1 ? "" : "s"}
+        <div className="flex items-center gap-2">
+          <div className="text-sm text-foreground/70">
+            {sortedRows.length} result{sortedRows.length === 1 ? "" : "s"}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              startRefreshTransition(() => {
+                router.refresh();
+              });
+            }}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-card-border px-3 text-sm font-medium text-foreground/80 hover:text-foreground disabled:opacity-60 disabled:cursor-not-allowed"
+            disabled={isRefreshing}
+            title="Refresh table data"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </button>
         </div>
       </div>
 
