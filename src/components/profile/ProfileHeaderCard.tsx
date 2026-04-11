@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
-import { CalendarCheck2, Dices, Mail, MapPin, Shield, Sparkles, Upload } from "lucide-react";
+import { CalendarCheck2, Mail, MapPin, Shield, Sparkles, Upload } from "lucide-react";
 import { uploadProfileAvatarAction } from "@/app/actions/profile";
 import { createAvatarGradient } from "@/lib/avatar-gradient";
 
@@ -49,25 +49,32 @@ export function ProfileHeaderCard({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={previewUrl} alt="Profile avatar" className="h-full w-full object-cover" />
               ) : (
-                <div
-                  className="relative flex h-full w-full items-center justify-center overflow-hidden"
-                  style={{ backgroundImage: avatarFallback.backgroundImage }}
+                <button
+                  type="button"
+                  onClick={() => setAvatarVariant((value) => value + 1)}
+                  className="relative flex h-full w-full items-center justify-center overflow-hidden transition-opacity hover:opacity-90"
+                  title="Click to randomize avatar"
                 >
-                  <span
-                    className="relative z-10 text-4xl font-black"
-                    style={{ color: avatarFallback.textColor }}
+                  <div
+                    className="relative flex h-full w-full items-center justify-center overflow-hidden"
+                    style={{ backgroundImage: avatarFallback.backgroundImage }}
                   >
-                    {initials}
-                  </span>
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 opacity-20 mix-blend-soft-light"
-                    style={{
-                      backgroundImage: "radial-gradient(rgba(255,255,255,0.9) 0.6px, transparent 0.6px)",
-                      backgroundSize: "3px 3px",
-                    }}
-                  />
-                </div>
+                    <span
+                      className="relative z-10 text-4xl font-black"
+                      style={{ color: avatarFallback.textColor }}
+                    >
+                      {initials}
+                    </span>
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 opacity-20 mix-blend-soft-light"
+                      style={{
+                        backgroundImage: "radial-gradient(rgba(255,255,255,0.9) 0.6px, transparent 0.6px)",
+                        backgroundSize: "3px 3px",
+                      }}
+                    />
+                  </div>
+                </button>
               )}
               <span className="pointer-events-none absolute inset-0" />
             </div>
@@ -100,16 +107,6 @@ export function ProfileHeaderCard({
                   {uploading ? "Uploading..." : "Upload"}
                 </button>
               </form>
-              {!previewUrl ? (
-                <button
-                  type="button"
-                  onClick={() => setAvatarVariant((value) => value + 1)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/45 bg-cyan-300/10 px-3 py-1 text-xs font-semibold text-cyan-100 transition-colors hover:bg-cyan-300/20"
-                >
-                  <Dices className="h-3.5 w-3.5" />
-                  Randomize
-                </button>
-              ) : null}
             </div>
             {uploadState.message ? (
               <p className={`max-w-[220px] text-center text-xs ${uploadState.ok ? "text-green-300" : "text-red-300"}`}>
