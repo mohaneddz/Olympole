@@ -1,8 +1,17 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { getCurrentProfile } from "@/lib/auth";
-import { SHARED_DECORATIVE_ELEMENTS } from "@/data/decoration";
 import { getAppSettings, getPublicLiveStreams } from "@/lib/queries";
+
+export const revalidate = 60;
+
+export const metadata: Metadata = {
+  title: "Live Streams",
+  description: "Watch live Olympole streams, upcoming broadcasts, and replays.",
+  alternates: {
+    canonical: "/live",
+  },
+};
 
 type StreamEvent = {
   title?: string | null;
@@ -88,10 +97,9 @@ function formatStreamDate(value?: string | null) {
 }
 
 export default async function LivePage() {
-  const [settings, streams, profile] = await Promise.all([
+  const [settings, streams] = await Promise.all([
     getAppSettings(),
     getPublicLiveStreams(),
-    getCurrentProfile(),
   ]);
   const liveStreams = streams.filter((stream) => stream.status === "live");
   const upcomingStreams = streams.filter((stream) => stream.status === "draft");
@@ -118,7 +126,7 @@ export default async function LivePage() {
 
         <div className="container relative z-10 mx-auto flex flex-col items-center justify-center gap-4 px-4 text-center">
           <Image
-            src="/images/brand/fire.png"
+            src="/images/brand/fire.webp"
             alt=""
             width={292}
             height={362}
@@ -126,7 +134,7 @@ export default async function LivePage() {
             className="mb-2 h-auto w-32 md:w-40 animate-fade-in-up"
           />
           <Image
-            src="/images/brand/circles.png"
+            src="/images/brand/circles.webp"
             alt=""
             width={243}
             height={134}
@@ -145,18 +153,6 @@ export default async function LivePage() {
       </section>
 
       <section id="live-streams" className="relative z-10 w-full bg-background pt-16 mt-4 pb-20">
-        {SHARED_DECORATIVE_ELEMENTS.map((el, i) => (
-          <Image
-            key={i}
-            src={el.src}
-            alt=""
-            width={120}
-            height={120}
-            aria-hidden
-            className={`pointer-events-none ${el.className}`}
-          />
-        ))}
-
         <div className="z-10 mx-auto w-full max-w-7xl px-4">
           {!settings.live_streaming_enabled ? (
             <div className="rounded-2xl border border-yellow-300/45 bg-yellow-500/10 p-8 text-center text-yellow-100">
@@ -320,17 +316,6 @@ export default async function LivePage() {
               )}
             </div>
           )}
-
-          {profile?.role === "admin" ? (
-            <div className="mt-10 flex justify-center">
-              <p className="w-full border-t border-white/10 pt-5 text-center text-sm text-white/55">
-                Admin shortcut{" "}
-                <Link href="/admin/live-streams" className="font-semibold text-cyan-200 transition hover:text-cyan-100">
-                  Manage live streams
-                </Link>
-              </p>
-            </div>
-          ) : null}
         </div>
       </section>
     </div>

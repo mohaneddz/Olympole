@@ -1,7 +1,18 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import { SHARED_DECORATIVE_ELEMENTS } from "@/data/decoration";
 import { getAppSettings, getFantasyRegisteredPlayers } from "@/lib/queries";
 import { PredictionsTabbedContent } from "@/components/predictions/PredictionsTabbedContent";
+
+export const revalidate = 60;
+
+export const metadata: Metadata = {
+  title: "Fantasy Predictions",
+  description: "Join Olympole fantasy predictions and track player standings.",
+  alternates: {
+    canonical: "/predictions",
+  },
+};
 
 export default async function PredictionsPage() {
   const settings = await getAppSettings();
@@ -21,8 +32,8 @@ export default async function PredictionsPage() {
         </div>
 
         <div className="mx-auto w-full max-w-6xl px-4 relative z-10 flex flex-col items-center justify-center gap-4 text-center">
-          <Image src="/images/brand/fire.png" alt="" width={292} height={362} aria-hidden className="mb-2 h-auto w-32 md:w-40 animate-fade-in-up" />
-          <Image src="/images/brand/circles.png" alt="" width={243} height={134} aria-hidden className="mb-6 h-auto w-16 md:w-20 animate-fade-in-up" />
+          <Image src="/images/brand/fire.webp" alt="" width={292} height={362} aria-hidden className="mb-2 h-auto w-32 md:w-40 animate-fade-in-up" />
+          <Image src="/images/brand/circles.webp" alt="" width={243} height={134} aria-hidden className="mb-6 h-auto w-16 md:w-20 animate-fade-in-up" />
           <h1 className="font-heading text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8">
             <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60">
               FANTASY
