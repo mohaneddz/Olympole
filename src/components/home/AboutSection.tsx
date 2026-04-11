@@ -10,7 +10,7 @@ export function AboutSection() {
         width={400}
         height={400}
         aria-hidden
-        className="pointer-events-none absolute -right-[6%] top-[10%] h-auto w-50 opacity-100 md:w-90"
+        className="pointer-events-none absolute -right-[6%] top-[10%] h-auto w-50 opacity-25 md:w-90 md:opacity-100"
       />
       <Image
         src="/svgs/artifacts/small-circles.svg"
@@ -18,7 +18,7 @@ export function AboutSection() {
         width={400}
         height={400}
         aria-hidden
-        className="pointer-events-none absolute left-[12%] top-[10%] h-auto w-20 opacity-100 md:w-70"
+        className="pointer-events-none absolute left-[12%] top-[10%] h-auto w-20 opacity-20 md:w-70 md:opacity-100"
       />
       <Image
         src="/svgs/artifacts/big-circles.svg"
@@ -26,7 +26,7 @@ export function AboutSection() {
         width={400}
         height={400}
         aria-hidden
-        className="pointer-events-none absolute -left-[6%] bottom-[30%] h-auto w-20 opacity-100 md:w-70"
+        className="pointer-events-none absolute -left-[6%] bottom-[30%] h-auto w-20 opacity-20 md:w-70 md:opacity-100"
       />
       <Image
         src="/svgs/artifacts/yellow-zigzag.svg"
@@ -34,7 +34,7 @@ export function AboutSection() {
         width={400}
         height={400}
         aria-hidden
-        className="pointer-events-none absolute -left-[6%] bottom-[10%] h-auto w-50 opacity-100 md:w-90"
+        className="pointer-events-none absolute -left-[6%] bottom-[10%] h-auto w-50 opacity-25 md:w-90 md:opacity-100"
       />
       <div className="container relative z-10 mx-auto w-full max-w-7xl px-4">
         <div className="mx-auto mb-14 max-w-4xl text-center md:mb-16">

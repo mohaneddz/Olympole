@@ -112,7 +112,7 @@ export default function ScheduleClient({ events }: ScheduleClientProps) {
           <div className="absolute inset-0 z-0 bg-[linear-gradient(to_bottom,transparent_0%,rgba(5,5,15,0.4)_80%,rgba(5,5,15,0.5)_100%)]" />
           <div className="absolute inset-0 bg-background/10 backdrop-blur-[1px]" />
           <div
-            className="absolute inset-0 opacity-[0.03]"
+            className="absolute inset-0 opacity-[0.02] md:opacity-[0.03]"
             style={{
               backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
               backgroundSize: "40px 40px",
@@ -146,13 +146,15 @@ export default function ScheduleClient({ events }: ScheduleClientProps) {
       </section>
 
       <div className="w-full bg-background pt-16">
-        <div className="relative z-20 mb-20 flex justify-center">
-          <div className="inline-flex flex-wrap items-center justify-center gap-1 rounded-full border-2 border-[#80d4ff] bg-[#1a2238] p-1 shadow-lg">
-            {(["Collective Sports", "Individual Sports", "Cultural Events"] as TabType[]).map((tab) => (
+        <div className="relative z-20 mb-20 flex justify-center px-4">
+          <div className="grid w-full max-w-xl grid-cols-2 gap-1 rounded-[2rem] border-2 border-[#80d4ff] bg-[#1a2238] p-1 shadow-lg md:inline-flex md:w-auto md:max-w-none md:flex-wrap md:items-center md:justify-center">
+            {(["Collective Sports", "Individual Sports", "Cultural Events"] as TabType[]).map((tab, index) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`rounded-full px-8 py-2.5 text-sm font-bold tracking-wide transition-colors duration-300 md:px-12 md:py-3 md:text-base ${
+                className={`rounded-full px-3 py-2.5 text-center text-xs font-bold tracking-wide transition-colors duration-300 sm:px-5 sm:text-sm md:px-10 md:py-3 md:text-base ${
+                  index === 2 ? "col-span-2 md:col-span-1" : ""
+                } ${
                   activeTab === tab ? "bg-[#80d4ff] text-black" : "text-white hover:text-[#80d4ff]/80"
                 }`}
               >

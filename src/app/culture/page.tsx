@@ -73,7 +73,7 @@ export default function CulturePage() {
               width={120}
               height={120}
               aria-hidden
-              className={`pointer-events-none ${el.className}`}
+              className={`pointer-events-none ${el.className} max-md:opacity-10`}
             />
           ))}
 
