@@ -6,7 +6,6 @@ import Link from "next/link";
 import { MapPin, CalendarDays, ChevronRight } from "lucide-react";
 
 type ScheduleClientProps = {
-  matches: any[];
   events: any[];
 };
 
@@ -54,7 +53,7 @@ function getSportColor(sportName: string) {
   return "bg-cyan-200 text-cyan-950";
 }
 
-export default function ScheduleClient({ matches, events }: ScheduleClientProps) {
+export default function ScheduleClient({ events }: ScheduleClientProps) {
   const [activeTab, setActiveTab] = useState<TabType>("Collective Sports");
 
   // Filter data based on tabs
@@ -96,7 +95,7 @@ export default function ScheduleClient({ matches, events }: ScheduleClientProps)
     }
 
     return grouped;
-  }, [activeTab, matches, events]);
+  }, [activeTab, events]);
 
   const dates = Object.keys(filteredData).sort();
 
@@ -108,7 +107,6 @@ export default function ScheduleClient({ matches, events }: ScheduleClientProps)
             src="/images/backgrounds/hero.avif"
             alt=""
             fill
-            priority
             className="object-cover"
           />
           <div className="absolute inset-0 z-0 bg-[linear-gradient(to_bottom,transparent_0%,rgba(5,5,15,0.4)_80%,rgba(5,5,15,0.5)_100%)]" />

@@ -22,7 +22,7 @@ export default async function PredictionsPage() {
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
       <section className="relative flex min-h-[60vh] flex-col items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <Image src="/images/backgrounds/hero.avif" alt="" fill priority className="object-cover" />
+          <Image src="/images/backgrounds/hero.avif" alt="" fill className="object-cover" />
           <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,rgba(5,5,15,0.4)_80%,rgba(5,5,15,0.5)_100%)] z-0" />
           <div className="absolute inset-0 bg-background/10 backdrop-blur-[1px]" />
           <div

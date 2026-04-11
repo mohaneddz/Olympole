@@ -21,7 +21,6 @@ export default function SportsPage() {
             src="/images/backgrounds/hero.avif"
             alt=""
             fill
-            priority
             className="object-cover"
           />
           <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,rgba(5,5,15,0.4)_80%,rgba(5,5,15,0.5)_100%)] z-0" />
