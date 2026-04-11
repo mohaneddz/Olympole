@@ -5,7 +5,6 @@ import { failure, success, type ActionResponse } from "@/lib/actions";
 import { getAllowedActivityRegistrationTables, getManagedActivityBySlug } from "@/lib/activity-registry";
 import { getCurrentProfile, requireAdmin, requireAuth } from "@/lib/auth";
 import { getRegistrationDraftCookieName } from "@/lib/cookie-drafts";
-import { getAppSettings } from "@/lib/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { activityRegistrationSchema, registrationBatchSchema } from "@/lib/validators";
 import { logAdminAction, revalidateAdminRegistrationPages, revalidateMany } from "@/server/_shared";
@@ -55,10 +54,6 @@ function validateActivitySpecificDetails(
     if (!details.performance_description) {
       return "Please provide a short performance description.";
     }
-  }
-
-  if (activitySlug === "art-exhibition" && !details.art_category) {
-    return "Please choose an art category.";
   }
 
   if (activitySlug === "writing-contest" && !details.writing_category) {
@@ -183,28 +178,15 @@ async function resolveActivityEventId(
   return { ok: true as const, eventId: fallbackEventId as string | null };
 }
 
-async function assertRegistrationLimit(userId: string, requestedEventCount: number) {
+async function getExistingRegistrationEventIds(userId: string) {
   const supabase = await createSupabaseServerClient();
-  const settings = await getAppSettings();
 
   const { data: existingRegistrations } = await supabase
     .from("v_activity_registrations_all")
     .select("id, event_id")
     .eq("user_id", userId);
 
-  const existingCount = existingRegistrations?.length ?? 0;
-  if (existingCount + requestedEventCount > settings.registration_max_events_per_user) {
-    return {
-      ok: false as const,
-      message: `You can register for up to ${settings.registration_max_events_per_user} events only.`,
-      existingEventIds: new Set((existingRegistrations ?? []).map((row) => row.event_id)),
-    };
-  }
-
-  return {
-    ok: true as const,
-    existingEventIds: new Set((existingRegistrations ?? []).map((row) => row.event_id)),
-  };
+  return new Set((existingRegistrations ?? []).map((row) => row.event_id));
 }
 
 export async function createRegistrationAction(_: ActionResponse, formData: FormData): Promise<ActionResponse> {
@@ -244,12 +226,8 @@ export async function createRegistrationAction(_: ActionResponse, formData: Form
   }
 
   const supabase = await createSupabaseServerClient();
-  const limitState = await assertRegistrationLimit(user.id, parsed.data.event_ids.length);
-  if (!limitState.ok) {
-    return failure(limitState.message);
-  }
-
-  const newEventIds = parsed.data.event_ids.filter((eventId) => !limitState.existingEventIds.has(eventId));
+  const existingEventIds = await getExistingRegistrationEventIds(user.id);
+  const newEventIds = parsed.data.event_ids.filter((eventId) => !existingEventIds.has(eventId));
   if (newEventIds.length === 0) {
     return failure("You are already registered for the selected event(s).");
   }
@@ -352,11 +330,6 @@ export async function createActivityRegistrationAction(
   }
 
   const supabase = await createSupabaseServerClient();
-  const limitState = await assertRegistrationLimit(user.id, 1);
-  if (!limitState.ok) {
-    return failure(limitState.message);
-  }
-
   const { data: existingActivityRegistration } = await supabase
     .from(registrationTable)
     .select("id")
@@ -423,7 +396,7 @@ export async function createActivityRegistrationAction(
     );
   }
   if (registrationTable.includes("art_exhibition")) {
-    typedDetails.detail_art_category = (parsed.data.registration_details?.art_category ?? details.art_category ?? "").trim() || null;
+    typedDetails.detail_art_category = (parsed.data.registration_details?.art_category ?? details.art_category ?? "").trim();
     typedDetails.detail_participated_before = normalizeDetailBoolean(
       parsed.data.registration_details?.participated_before ?? details.participated_before
     );
@@ -551,7 +524,7 @@ export async function updateActivityRegistrationAction(
     );
   }
   if (registrationTable.includes("art_exhibition")) {
-    typedDetails.detail_art_category = (parsed.data.registration_details?.art_category ?? details.art_category ?? "").trim() || null;
+    typedDetails.detail_art_category = (parsed.data.registration_details?.art_category ?? details.art_category ?? "").trim();
     typedDetails.detail_participated_before = normalizeDetailBoolean(
       parsed.data.registration_details?.participated_before ?? details.participated_before
     );

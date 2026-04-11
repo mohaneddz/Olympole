@@ -15,6 +15,11 @@ export async function proxy(request: NextRequest) {
     },
   });
 
+  const isServerActionRequest = request.method === "POST" && request.headers.has("next-action");
+  if (isServerActionRequest) {
+    return response;
+  }
+
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL!,
     env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!,

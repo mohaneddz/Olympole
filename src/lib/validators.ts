@@ -43,7 +43,7 @@ export const registrationSchema = z.object({
 });
 
 export const registrationBatchSchema = registrationSchema.extend({
-  event_ids: z.array(uuid).min(1).max(8),
+  event_ids: z.array(uuid).min(1),
 });
 
 export const activityRegistrationSchema = registrationSchema.extend({
@@ -169,7 +169,6 @@ export const profileUpdateSchema = z.object({
     .optional()
     .or(z.literal("")),
   phone: optionalPhone,
-  bio: optionalText(400),
   timezone: optionalText(80),
   gender: z.preprocess(trimInput, z.enum(["male", "female"])).optional(),
 });
