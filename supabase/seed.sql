@@ -5,12 +5,34 @@ insert into public.app_settings (key, value)
 values
   ('registration_enabled', 'true'::jsonb),
   ('predictions_enabled', 'true'::jsonb),
+  ('fantasy_launch', 'false'::jsonb),
   ('writing_enabled', 'true'::jsonb),
   ('live_streaming_enabled', 'true'::jsonb),
   ('registration_max_events_per_user', '8'::jsonb)
 on conflict (key) do update
 set value = excluded.value,
     updated_at = now();
+
+insert into public.website_config (
+  id,
+  registration_enabled,
+  predictions_enabled,
+  fantasy_launch,
+  writing_enabled,
+  live_streaming_enabled,
+  registration_max_events_per_user
+)
+values
+  (1, true, true, false, true, true, 8)
+on conflict (id) do update
+set
+  registration_enabled = excluded.registration_enabled,
+  predictions_enabled = excluded.predictions_enabled,
+  fantasy_launch = excluded.fantasy_launch,
+  writing_enabled = excluded.writing_enabled,
+  live_streaming_enabled = excluded.live_streaming_enabled,
+  registration_max_events_per_user = excluded.registration_max_events_per_user,
+  updated_at = now();
 
 insert into public.sports (name, slug, sport_type, is_team_based, gender_division, description, is_active)
 values

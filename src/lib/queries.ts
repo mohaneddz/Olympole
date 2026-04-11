@@ -1,13 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-export type AppSettings = {
-  registration_enabled: boolean;
-  predictions_enabled: boolean;
-  fantasy_launch: boolean;
-  writing_enabled: boolean;
-  live_streaming_enabled: boolean;
-  registration_max_events_per_user: number;
-};
+import { createSupabasePublicClient } from "@/lib/supabase/public";
+import { getDefaultAppSettings, type AppSettings } from "@/lib/app-settings";
 
 export type FantasyRegisteredPlayer = {
   id: string;
@@ -18,6 +11,19 @@ export type FantasyRegisteredPlayer = {
   preferred_role: string | null;
   current_score: number;
   role_bucket: "goal" | "field";
+};
+
+export type PublicLiveStream = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: "live" | "draft" | "ended";
+  access: string | null;
+  playback_url: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  event_id: string | null;
+  events: unknown;
 };
 
 function inferFantasyRoleBucket(preferredRole: string | null): "goal" | "field" {
@@ -38,7 +44,7 @@ function inferFantasyRoleBucket(preferredRole: string | null): "goal" | "field" 
 }
 
 export async function getPublicSports() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("sports")
     .select("id, name, slug, sport_type, is_team_based, gender_division, description")
@@ -53,7 +59,7 @@ export async function getPublicSports() {
 }
 
 export async function getPublicEvents() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("events")
     .select(
@@ -102,7 +108,7 @@ export async function getAdminActivities() {
 }
 
 export async function getPublicMatches() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("matches")
     .select(
@@ -118,7 +124,7 @@ export async function getPublicMatches() {
 }
 
 export async function getPublicResults() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("results")
     .select("id, event_id, participant_or_team_name, placement, medal, score_summary, published_at, events(title, slug)")
@@ -134,7 +140,7 @@ export async function getPublicResults() {
 }
 
 export async function getLeaderboard() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("predictions")
     .select("points_awarded, outcome, profiles!inner(full_name, email)");
@@ -145,7 +151,7 @@ export async function getLeaderboard() {
 
   const aggregate = new Map<string, { name: string; points: number; wins: number }>();
 
-  for (const row of data ?? []) {
+  for (const row of (data ?? []) as any[]) {
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
     const key = profile?.email ?? "unknown";
     const existing = aggregate.get(key);
@@ -164,7 +170,7 @@ export async function getLeaderboard() {
 }
 
 export async function getPublishedWritingSubmissions() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("writing_submissions")
     .select("id, title, content, category, is_featured, created_at, profiles!inner(full_name, email)")
@@ -180,7 +186,7 @@ export async function getPublishedWritingSubmissions() {
 }
 
 export async function getWritingVoteCounts() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("submission_votes")
     .select("submission_id");
@@ -190,7 +196,7 @@ export async function getWritingVoteCounts() {
   }
 
   const counts = new Map<string, number>();
-  for (const row of data ?? []) {
+  for (const row of (data ?? []) as any[]) {
     counts.set(row.submission_id, (counts.get(row.submission_id) ?? 0) + 1);
   }
 
@@ -198,19 +204,26 @@ export async function getWritingVoteCounts() {
 }
 
 export async function getAppSettings(): Promise<AppSettings> {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.from("app_settings").select("key, value");
+  const supabase = createSupabasePublicClient();
+  const defaults = getDefaultAppSettings();
 
-  const defaults: AppSettings = {
-    registration_enabled: true,
-    predictions_enabled: true,
-    fantasy_launch: false,
-    writing_enabled: true,
-    live_streaming_enabled: true,
-    registration_max_events_per_user: 8,
-  };
+  const websiteConfigRes = await supabase
+    .from("website_config")
+    .select(
+      "registration_enabled, predictions_enabled, fantasy_launch, writing_enabled, live_streaming_enabled, registration_max_events_per_user"
+    )
+    .eq("id", 1)
+    .maybeSingle();
 
-  for (const row of data ?? []) {
+  if (websiteConfigRes.data) {
+    return {
+      ...defaults,
+      ...(websiteConfigRes.data as Partial<AppSettings>),
+    };
+  }
+
+  const legacySettingsRes = await supabase.from("app_settings").select("key, value");
+  for (const row of (legacySettingsRes.data ?? []) as any[]) {
     if (row.key === "registration_max_events_per_user") {
       const num = Number(row.value);
       if (Number.isFinite(num) && num > 0) {
@@ -263,8 +276,8 @@ export async function getUserPredictions(userId: string) {
   return data ?? [];
 }
 
-export async function getPublicLiveStreams() {
-  const supabase = await createSupabaseServerClient();
+export async function getPublicLiveStreams(): Promise<PublicLiveStream[]> {
+  const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("live_streams")
     .select("id, title, description, status, access, playback_url, starts_at, ends_at, event_id, events(title, slug, starts_at)")
@@ -276,11 +289,11 @@ export async function getPublicLiveStreams() {
     return [];
   }
 
-  return data ?? [];
+  return (data ?? []) as PublicLiveStream[];
 }
 
 export async function getFantasyRegisteredPlayers(): Promise<FantasyRegisteredPlayer[]> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("v_profile_activity_registrations")
     .select("id, profile_id, full_name, email, preferred_role, detail_gender, status, activity_slug, created_at")
@@ -293,7 +306,7 @@ export async function getFantasyRegisteredPlayers(): Promise<FantasyRegisteredPl
     return [];
   }
 
-  const profileIds = [...new Set(data.map((row) => row.profile_id).filter(Boolean))] as string[];
+  const profileIds = [...new Set((data as any[]).map((row) => row.profile_id).filter(Boolean))] as string[];
 
   const [profilesRes, scoresRes] = await Promise.all([
     profileIds.length > 0
@@ -305,18 +318,18 @@ export async function getFantasyRegisteredPlayers(): Promise<FantasyRegisteredPl
   ]);
 
   const avatarByProfile = new Map<string, string | null>();
-  for (const row of profilesRes.data ?? []) {
+  for (const row of (profilesRes.data ?? []) as any[]) {
     avatarByProfile.set(row.id, row.avatar_url ?? null);
   }
 
   const scoreByProfile = new Map<string, number>();
-  for (const row of scoresRes.data ?? []) {
+  for (const row of (scoresRes.data ?? []) as any[]) {
     const existing = scoreByProfile.get(row.profile_id) ?? 0;
     scoreByProfile.set(row.profile_id, existing + (row.total_points ?? 0));
   }
 
   const deduped = new Map<string, FantasyRegisteredPlayer>();
-  for (const row of data) {
+  for (const row of data as any[]) {
     const key = row.profile_id ?? `${row.email?.toLowerCase() ?? "unknown"}:${row.full_name.toLowerCase()}`;
     if (deduped.has(key)) {
       continue;
@@ -353,7 +366,7 @@ export async function getAdminLiveStreams() {
 }
 
 export async function getHomeMetrics() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicClient();
   const [eventsRes, sportsRes, regsRes] = await Promise.all([
     supabase.from("events").select("id, starts_at, ends_at, status", { count: "exact" }),
     supabase.from("sports").select("id", { count: "exact" }).eq("is_active", true),
@@ -361,7 +374,7 @@ export async function getHomeMetrics() {
   ]);
 
   const today = new Date();
-  const activeRange = (eventsRes.data ?? []).reduce(
+  const activeRange = ((eventsRes.data ?? []) as any[]).reduce(
     (acc, row) => {
       const start = new Date(row.starts_at);
       const end = new Date(row.ends_at);
@@ -372,7 +385,7 @@ export async function getHomeMetrics() {
     { start: null as Date | null, end: null as Date | null }
   );
 
-  const liveEvents = (eventsRes.data ?? []).filter((row) => row.status === "live").length;
+  const liveEvents = ((eventsRes.data ?? []) as any[]).filter((row) => row.status === "live").length;
 
   return {
     totalEvents: eventsRes.count ?? 0,

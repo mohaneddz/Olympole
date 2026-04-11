@@ -309,8 +309,9 @@ export async function createActivityRegistrationAction(
   _: ActionResponse,
   formData: FormData
 ): Promise<ActionResponse> {
-  const user = await requireAuth();
-  const profile = await getCurrentProfile();
+  try {
+    const user = await requireAuth();
+    const profile = await getCurrentProfile();
 
   if (!profile?.full_name || !profile?.school || !profile?.year_of_study || !profile?.gender || !profile?.student_id) {
     return failure("Please complete your profile first before registering to activities.");
@@ -448,19 +449,24 @@ export async function createActivityRegistrationAction(
 
   revalidateMany([`/register/${parsed.data.activity_slug}`, "/register", "/profile"]);
   revalidateAdminRegistrationPages();
-  return success("Registration submitted and saved successfully.");
+    return success("Registration submitted and saved successfully.");
+  } catch (error) {
+    console.error("createActivityRegistrationAction error:", error);
+    return failure(error instanceof Error ? error.message : "Failed to submit registration.");
+  }
 }
 
 export async function updateActivityRegistrationAction(
   _: ActionResponse,
   formData: FormData
 ): Promise<ActionResponse> {
-  const user = await requireAuth();
-  const profile = await getCurrentProfile();
-  const registrationId = String(formData.get("registration_id") ?? "");
-  if (!registrationId) {
-    return failure("Missing registration id.");
-  }
+  try {
+    const user = await requireAuth();
+    const profile = await getCurrentProfile();
+    const registrationId = String(formData.get("registration_id") ?? "");
+    if (!registrationId) {
+      return failure("Missing registration id.");
+    }
 
   const { parsed, details } = parseActivityRegistrationPayload(formData);
   if (!parsed.success) {
@@ -585,7 +591,11 @@ export async function updateActivityRegistrationAction(
 
   revalidateMany([`/register/${parsed.data.activity_slug}`, "/register", "/profile"]);
   revalidateAdminRegistrationPages();
-  return success("Registration updated successfully.");
+    return success("Registration updated successfully.");
+  } catch (error) {
+    console.error("updateActivityRegistrationAction error:", error);
+    return failure(error instanceof Error ? error.message : "Failed to update registration.");
+  }
 }
 
 export async function deleteActivityRegistrationAction(formData: FormData): Promise<void> {

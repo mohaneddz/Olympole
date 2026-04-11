@@ -67,7 +67,7 @@ export function ActivitiesSection() {
       <div className="container relative z-20 mx-auto w-full max-w-7xl px-4">
         <div className="mb-12 flex flex-col items-center text-center md:mb-14">
           <Image
-            src="/images/brand/fire.png"
+            src="/images/brand/fire.webp"
             alt=""
             width={292}
             height={362}
@@ -75,7 +75,7 @@ export function ActivitiesSection() {
             className="mb-1 h-auto w-24 md:w-28"
           />
           <Image
-            src="/images/brand/circles.png"
+            src="/images/brand/circles.webp"
             alt=""
             width={243}
             height={134}

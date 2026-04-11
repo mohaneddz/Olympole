@@ -1,9 +1,16 @@
-"use client";
-
+import type { Metadata } from "next";
 import Image from "next/image";
 import { CULTURE_EVENTS } from "@/data/culture";
 import { SHARED_DECORATIVE_ELEMENTS } from "@/data/decoration";
 import { CultureCard } from "@/components/culture/CultureCard";
+
+export const metadata: Metadata = {
+  title: "Culture",
+  description: "Discover Olympole cultural events including writing, art, and talent activities.",
+  alternates: {
+    canonical: "/culture",
+  },
+};
 
 /* ───────── page ───────── */
 export default function CulturePage() {
@@ -30,7 +37,7 @@ export default function CulturePage() {
 
         <div className="container relative z-10 mx-auto flex flex-col items-center justify-center gap-4 px-4 text-center">
           <Image
-            src="/images/brand/fire.png"
+            src="/images/brand/fire.webp"
             alt=""
             width={292}
             height={362}
@@ -38,7 +45,7 @@ export default function CulturePage() {
             className="mb-2 h-auto w-32 md:w-40 animate-fade-in-up"
           />
           <Image
-            src="/images/brand/circles.png"
+            src="/images/brand/circles.webp"
             alt=""
             width={243}
             height={134}

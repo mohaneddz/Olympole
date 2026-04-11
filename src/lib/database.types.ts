@@ -304,6 +304,41 @@ export interface Database {
           updated_at?: string;
         };
       };
+      website_config: {
+        Row: {
+          id: number;
+          registration_enabled: boolean;
+          predictions_enabled: boolean;
+          fantasy_launch: boolean;
+          writing_enabled: boolean;
+          live_streaming_enabled: boolean;
+          registration_max_events_per_user: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          registration_enabled?: boolean;
+          predictions_enabled?: boolean;
+          fantasy_launch?: boolean;
+          writing_enabled?: boolean;
+          live_streaming_enabled?: boolean;
+          registration_max_events_per_user?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: number;
+          registration_enabled?: boolean;
+          predictions_enabled?: boolean;
+          fantasy_launch?: boolean;
+          writing_enabled?: boolean;
+          live_streaming_enabled?: boolean;
+          registration_max_events_per_user?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       admin_activity_logs: {
         Row: {
           id: string;

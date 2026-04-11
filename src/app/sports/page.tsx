@@ -34,7 +34,7 @@ export default function SportsPage() {
 
         <div className="container relative z-10 mx-auto flex flex-col items-center justify-center gap-4 px-4 text-center">
           <Image
-            src="/images/brand/fire.png"
+            src="/images/brand/fire.webp"
             alt=""
             width={292}
             height={362}
@@ -42,7 +42,7 @@ export default function SportsPage() {
             className="mb-2 h-auto w-32 md:w-40 animate-fade-in-up"
           />
           <Image
-            src="/images/brand/circles.png"
+            src="/images/brand/circles.webp"
             alt=""
             width={243}
             height={134}

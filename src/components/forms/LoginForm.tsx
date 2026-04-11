@@ -91,7 +91,7 @@ export function LoginForm() {
   const isLogin = mode === "login";
   const state = isLogin ? signInState : signUpState;
   const pending = isLogin ? signingIn : signingUp;
-  const tabPanelClassName = "h-[560px] overflow-y-auto pr-1";
+  const tabPanelClassName = "pr-1";
 
   const updateLoginField = (name: keyof typeof loginForm, value: string) => {
     setLoginForm((current) => ({ ...current, [name]: value }));
