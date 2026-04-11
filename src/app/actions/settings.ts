@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
+import { getDefaultAppSettings } from "@/lib/app-settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { appSettingSchema } from "@/lib/validators";
 
@@ -21,7 +22,15 @@ export async function updateSettingAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  await supabase.from("app_settings").upsert(parsed.data);
+  const defaults = getDefaultAppSettings();
+  await supabase.from("website_config").upsert(
+    {
+      id: 1,
+      ...defaults,
+      [parsed.data.key]: parsed.data.value,
+    },
+    { onConflict: "id" }
+  );
 
   revalidatePath("/admin/settings");
   revalidatePath("/register");
