@@ -7,8 +7,12 @@ import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
 import { getAppSettings } from "@/lib/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-function normalizeProfileGenderToCategory(value: string | null | undefined): "men" | "women" | "" {
-  const normalized = String(value ?? "").trim().toLowerCase();
+function normalizeProfileGenderToCategory(
+  value: string | null | undefined,
+): "men" | "women" | "" {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
   if (["man", "male", "men"].includes(normalized)) return "men";
   if (["woman", "female", "women"].includes(normalized)) return "women";
   return "";
@@ -69,7 +73,10 @@ export default async function ActivityRegistrationPage({
     notFound();
   }
 
-  const [settings, user] = await Promise.all([getAppSettings(), getCurrentUser()]);
+  const [settings, user] = await Promise.all([
+    getAppSettings(),
+    getCurrentUser(),
+  ]);
 
   if (!settings.registration_enabled) {
     return (
@@ -91,7 +98,9 @@ export default async function ActivityRegistrationPage({
 
     const { data: events } = await supabase
       .from("events")
-      .select("id, title, starts_at, venue, status, is_registration_open, activities!inner(slug)")
+      .select(
+        "id, title, starts_at, venue, status, is_registration_open, activities!inner(slug)",
+      )
       .eq("activities.slug", activity.slug)
       .order("starts_at", { ascending: true });
 
@@ -119,11 +128,15 @@ export default async function ActivityRegistrationPage({
             {activity.category.replace("_", " ")}
           </p>
           <h1 className="text-4xl font-black tracking-tight md:text-6xl">
-            <span className={`bg-gradient-to-r ${activity.heroGradient} bg-clip-text text-transparent`}>
+            <span
+              className={`bg-gradient-to-r ${activity.heroGradient} bg-clip-text text-transparent`}
+            >
               {activity.title} Registration
             </span>
           </h1>
-          <p className="mx-auto max-w-3xl text-lg text-foreground/80">{activity.shortDescription}</p>
+          <p className="mx-auto max-w-3xl text-lg text-foreground/80">
+            {activity.shortDescription}
+          </p>
         </section>
 
         <ActivityRegistrationForm
@@ -175,7 +188,9 @@ export default async function ActivityRegistrationPage({
   const [{ data: events }, { data: existingRows }] = await Promise.all([
     supabase
       .from("events")
-      .select("id, title, starts_at, venue, status, is_registration_open, activities!inner(slug)")
+      .select(
+        "id, title, starts_at, venue, status, is_registration_open, activities!inner(slug)",
+      )
       .eq("activities.slug", activity.slug)
       .order("starts_at", { ascending: true }),
     (supabase as any)
@@ -220,12 +235,11 @@ export default async function ActivityRegistrationPage({
         ]
       : linkedEvents;
 
-  const defaultEventId = existingRegistration?.event_id ?? allEvents[0]?.id ?? "";
-  const lockedGenderCategory = normalizeProfileGenderToCategory(profile?.gender);
-
-  // Surface an incomplete-profile hint, but never block the form.
-  const profileIsIncomplete =
-    !profile?.full_name || !profile?.school || !profile?.year_of_study || !profile?.gender || !profile?.student_id;
+  const defaultEventId =
+    existingRegistration?.event_id ?? allEvents[0]?.id ?? "";
+  const lockedGenderCategory = normalizeProfileGenderToCategory(
+    profile?.gender,
+  );
 
   return (
     <div className="container mx-auto flex min-h-screen max-w-6xl flex-1 flex-col gap-8 px-4 py-12 md:py-16">
@@ -242,21 +256,15 @@ export default async function ActivityRegistrationPage({
           {activity.category.replace("_", " ")}
         </p>
         <h1 className="text-4xl font-black tracking-tight md:text-6xl">
-          <span className={`bg-gradient-to-r ${activity.heroGradient} bg-clip-text text-transparent`}>
+          <span
+            className={`bg-gradient-to-r ${activity.heroGradient} bg-clip-text text-transparent`}
+          >
             {activity.title} Registration
           </span>
         </h1>
-        <p className="mx-auto max-w-3xl text-lg text-foreground/80">{activity.shortDescription}</p>
-
-        {profileIsIncomplete && (
-          <p className="mx-auto max-w-xl text-sm text-yellow-300/80">
-            Your profile is incomplete — some fields below may not be pre-filled.{" "}
-            <Link href="/onboarding" className="underline underline-offset-2">
-              Complete your profile
-            </Link>{" "}
-            anytime to fix that.
-          </p>
-        )}
+        <p className="mx-auto max-w-3xl text-lg text-foreground/80">
+          {activity.shortDescription}
+        </p>
       </section>
 
       <ActivityRegistrationForm
@@ -274,10 +282,13 @@ export default async function ActivityRegistrationPage({
         }
         defaults={{
           event_id: defaultEventId,
-          full_name: existingRegistration?.full_name ?? profile?.full_name ?? "",
-          email: existingRegistration?.email ?? profile?.email ?? user.email ?? "",
+          full_name:
+            existingRegistration?.full_name ?? profile?.full_name ?? "",
+          email:
+            existingRegistration?.email ?? profile?.email ?? user.email ?? "",
           phone: existingRegistration?.phone ?? profile?.phone ?? "",
-          department_or_school: existingRegistration?.department_or_school ?? profile?.school ?? "",
+          department_or_school:
+            existingRegistration?.department_or_school ?? profile?.school ?? "",
           team_name: existingRegistration?.team_name ?? "",
           emergency_contact: existingRegistration?.emergency_contact ?? "",
           previous_experience: existingRegistration?.previous_experience ?? "",
@@ -285,17 +296,34 @@ export default async function ActivityRegistrationPage({
           availability_date: "",
           preferred_role: existingRegistration?.preferred_role ?? "",
           additional_notes: "",
-          detail_gender: lockedGenderCategory || String(existingRegistration?.detail_gender ?? "") || (activity.slug === "football" ? "men" : ""),
-          detail_competition_level: String(existingRegistration?.detail_competition_level ?? "") || "",
-          detail_running_distance: String(existingRegistration?.detail_running_distance ?? "") || "",
-          detail_joined_marathon_before: String(existingRegistration?.detail_joined_marathon_before ?? "") || "no",
-          detail_participated_before: String(existingRegistration?.detail_participated_before ?? "") || "no",
-          detail_elo_rating: String(existingRegistration?.detail_elo_rating ?? "") || "",
-          detail_talent_type: String(existingRegistration?.detail_talent_type ?? "") || "",
-          detail_talent_type_other: String(existingRegistration?.detail_talent_type_other ?? "") || "",
-          detail_performance_description: String(existingRegistration?.detail_performance_description ?? "") || "",
-          detail_writing_category: String(existingRegistration?.detail_writing_category ?? "") || "",
-          detail_art_category: String(existingRegistration?.detail_art_category ?? "") || "",
+          detail_gender:
+            lockedGenderCategory ||
+            String(existingRegistration?.detail_gender ?? "") ||
+            (activity.slug === "football" ? "men" : ""),
+          detail_competition_level:
+            String(existingRegistration?.detail_competition_level ?? "") || "",
+          detail_running_distance:
+            String(existingRegistration?.detail_running_distance ?? "") || "",
+          detail_joined_marathon_before:
+            String(existingRegistration?.detail_joined_marathon_before ?? "") ||
+            "no",
+          detail_participated_before:
+            String(existingRegistration?.detail_participated_before ?? "") ||
+            "no",
+          detail_elo_rating:
+            String(existingRegistration?.detail_elo_rating ?? "") || "",
+          detail_talent_type:
+            String(existingRegistration?.detail_talent_type ?? "") || "",
+          detail_talent_type_other:
+            String(existingRegistration?.detail_talent_type_other ?? "") || "",
+          detail_performance_description:
+            String(
+              existingRegistration?.detail_performance_description ?? "",
+            ) || "",
+          detail_writing_category:
+            String(existingRegistration?.detail_writing_category ?? "") || "",
+          detail_art_category:
+            String(existingRegistration?.detail_art_category ?? "") || "",
           detail_strengths: "",
           detail_schedule: "",
         }}

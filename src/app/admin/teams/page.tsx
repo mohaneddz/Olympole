@@ -1,6 +1,9 @@
 import { Shield } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
-import { AdminTeamsManagementDashboard, CreateTeamButton } from "@/components/admin/AdminTeamsManagementDashboard";
+import {
+  AdminTeamsManagementDashboard,
+  CreateTeamButton,
+} from "@/components/admin/AdminTeamsManagementDashboard";
 import { ACTIVITY_COLUMNS } from "@/data/activities";
 import { requireAdmin } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -9,7 +12,13 @@ export default async function AdminTeamsPage() {
   await requireAdmin();
   const supabase = await createSupabaseServerClient();
 
-  const allowedSportSlugs = new Set(["football", "basketball", "volleyball", "handball", "knowledge-cup"]);
+  const allowedSportSlugs = new Set([
+    "football",
+    "basketball",
+    "volleyball",
+    "handball",
+    "knowledge-cup",
+  ]);
   const allowedSportsFromActivities = ACTIVITY_COLUMNS.flatMap((column) =>
     column.items
       .map((item) => {
@@ -20,14 +29,25 @@ export default async function AdminTeamsPage() {
         return {
           slug,
           name: item.name,
-          sport_type: column.title === "Cultural Events" ? "culture" : "collective",
+          sport_type:
+            column.title === "Cultural Events" ? "culture" : "collective",
         } as const;
       })
-      .filter((item): item is { slug: string; name: string; sport_type: "collective" | "culture" } => item !== null)
+      .filter(
+        (
+          item,
+        ): item is {
+          slug: string;
+          name: string;
+          sport_type: "collective" | "culture";
+        } => item !== null,
+      ),
   );
 
   const uniqueAllowedSports = Array.from(
-    new Map(allowedSportsFromActivities.map((sport) => [sport.slug, sport])).values()
+    new Map(
+      allowedSportsFromActivities.map((sport) => [sport.slug, sport]),
+    ).values(),
   );
 
   if (uniqueAllowedSports.length > 0) {
@@ -38,40 +58,64 @@ export default async function AdminTeamsPage() {
         sport_type: sport.sport_type,
         is_team_based: true,
       })),
-      { onConflict: "slug" }
+      { onConflict: "slug" },
     );
   }
 
-  const [sportsRes, profilesRes, membershipsRes] = await Promise.all([
-    supabase
-      .from("sports")
-      .select("id, name, slug, sport_type")
-      .in("slug", Array.from(allowedSportSlugs))
-      .order("name", { ascending: true }),
-    supabase
-      .from("profiles")
-      .select("id, full_name, email")
-      .order("full_name", { ascending: true })
-      .limit(3000),
-    supabase
-      .from("team_memberships")
-      .select("id, team_id, profile_id, role, created_at, teams(name), profiles(full_name, email)")
-      .order("created_at", { ascending: false })
-      .limit(4000),
-  ]);
+  const [sportsRes, profilesRes, registrantsRes, membershipsRes] =
+    await Promise.all([
+      supabase
+        .from("sports")
+        .select("id, name, slug, sport_type")
+        .in("slug", Array.from(allowedSportSlugs))
+        .order("name", { ascending: true }),
+      supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .order("full_name", { ascending: true })
+        .limit(3000),
+      supabase
+        .from("v_profile_activity_registrations")
+        .select("id, profile_id, full_name, email, activity_slug")
+        .is("profile_id", null)
+        .in("activity_slug", [
+          "football",
+          "basketball",
+          "handball",
+          "volleyball",
+        ])
+        .in("status", ["approved", "pending"])
+        .order("full_name", { ascending: true })
+        .limit(2000),
+      // In the Promise.all, change the membershipsRes query:
+      supabase
+        .from("team_memberships")
+        .select(
+          "id, team_id, profile_id, registration_id, role, created_at, guest_name, guest_email, teams(name), profiles!team_memberships_profile_id_fkey(full_name, email)",
+        )
+        .order("created_at", { ascending: false })
+        .limit(4000),
+    ]);
 
   const teamSelectWithCategory = await supabase
     .from("teams")
     .select("id, name, category, sport_id, sports(name, slug, sport_type)")
-    .in("sport_id", (sportsRes.data ?? []).map((sport) => sport.id))
+    .in(
+      "sport_id",
+      (sportsRes.data ?? []).map((sport) => sport.id),
+    )
     .order("name", { ascending: true });
 
   const teamsRes =
-    teamSelectWithCategory.error && teamSelectWithCategory.error.message.toLowerCase().includes("category")
+    teamSelectWithCategory.error &&
+    teamSelectWithCategory.error.message.toLowerCase().includes("category")
       ? await supabase
           .from("teams")
           .select("id, name, sport_id, sports(name, slug, sport_type)")
-          .in("sport_id", (sportsRes.data ?? []).map((sport) => sport.id))
+          .in(
+            "sport_id",
+            (sportsRes.data ?? []).map((sport) => sport.id),
+          )
           .order("name", { ascending: true })
       : teamSelectWithCategory;
 
@@ -102,25 +146,47 @@ export default async function AdminTeamsPage() {
       members_count: membershipsByTeamId.get(team.id) ?? 0,
     };
   });
-
   const memberships = (membershipsRes.data ?? []).map((membership) => {
-    const team = Array.isArray(membership.teams) ? membership.teams[0] : membership.teams;
-    const profile = Array.isArray(membership.profiles) ? membership.profiles[0] : membership.profiles;
+    const team = Array.isArray(membership.teams)
+      ? membership.teams[0]
+      : membership.teams;
+    const profile = Array.isArray(membership.profiles)
+      ? membership.profiles[0]
+      : membership.profiles;
     return {
       id: membership.id,
       team_id: membership.team_id,
       team_name: team?.name ?? "Unknown Team",
       profile_id: membership.profile_id,
-      profile_name: profile?.full_name || profile?.email || "Unknown User",
+      registration_id: membership.registration_id,
+      guest_name: membership.guest_name ?? null,
+      guest_email: membership.guest_email ?? null,
+      profile_name:
+        profile?.full_name ||
+        profile?.email ||
+        membership.guest_name ||
+        "Guest",
       role: membership.role,
       created_at: membership.created_at,
     };
   });
-
-  const profiles = (profilesRes.data ?? []).map((profile) => ({
+  const profileOptions = (profilesRes.data ?? []).map((profile) => ({
     id: profile.id,
-    label: profile.full_name ? `${profile.full_name} (${profile.email})` : profile.email,
+    label: profile.full_name
+      ? `${profile.full_name} (${profile.email})`
+      : (profile.email ?? profile.id),
+    isGuest: false as const,
   }));
+
+  const guestOptions = (registrantsRes.data ?? []).map((reg) => ({
+    id: `reg:${reg.id}`, // prefix so the dialog can distinguish
+    label: `[Guest] ${reg.full_name} (${reg.email ?? reg.activity_slug})`,
+    isGuest: true as const,
+    registrationId: reg.id,
+    activitySlug: reg.activity_slug,
+  }));
+
+  const profiles = [...profileOptions, ...guestOptions];
 
   return (
     <div className="space-y-8">
@@ -134,6 +200,9 @@ export default async function AdminTeamsPage() {
           { label: "Sports", value: uniqueAllowedSports.length },
         ]}
       />
+      <div className="flex justify-end">
+        <CreateTeamButton sports={sportsRes.data ?? []} />{" "}
+      </div>
       <AdminTeamsManagementDashboard
         sports={sportsRes.data ?? []}
         teams={teams}

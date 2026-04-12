@@ -1,11 +1,26 @@
 "use server";
 
 import { failure, success, type ActionResponse } from "@/lib/actions";
-import { getAllowedActivityRegistrationTables, getManagedActivityBySlug } from "@/lib/activity-registry";
-import { getCurrentProfile, getCurrentUser, requireAdmin, requireAuth } from "@/lib/auth";
+import {
+  getAllowedActivityRegistrationTables,
+  getManagedActivityBySlug,
+} from "@/lib/activity-registry";
+import {
+  getCurrentProfile,
+  getCurrentUser,
+  requireAdmin,
+  requireAuth,
+} from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { activityRegistrationSchema, registrationBatchSchema } from "@/lib/validators";
-import { logAdminAction, revalidateAdminRegistrationPages, revalidateMany } from "@/server/_shared";
+import {
+  activityRegistrationSchema,
+  registrationBatchSchema,
+} from "@/lib/validators";
+import {
+  logAdminAction,
+  revalidateAdminRegistrationPages,
+  revalidateMany,
+} from "@/server/_shared";
 
 function sanitizeDetailsFromFormData(formData: FormData) {
   const details: Record<string, string> = {};
@@ -30,7 +45,7 @@ function validateActivitySpecificDetails(
   activitySlug: string,
   categoryType: "collective_sport" | "individual_sport" | "culture",
   details: Record<string, string>,
-  preferredRole: string
+  preferredRole: string,
 ) {
   if (categoryType === "collective_sport") {
     const gender = (details.gender ?? "").toLowerCase();
@@ -46,7 +61,10 @@ function validateActivitySpecificDetails(
     if (!details.talent_type) {
       return "Please select your talent type.";
     }
-    if (details.talent_type.toLowerCase() === "other" && !details.talent_type_other) {
+    if (
+      details.talent_type.toLowerCase() === "other" &&
+      !details.talent_type_other
+    ) {
       return "Please specify your talent type when selecting Other.";
     }
     if (!details.performance_description) {
@@ -81,7 +99,9 @@ function validateActivitySpecificDetails(
   return null;
 }
 
-function normalizeProfileGenderToCategory(value: unknown): "men" | "women" | null {
+function normalizeProfileGenderToCategory(
+  value: unknown,
+): "men" | "women" | null {
   if (typeof value !== "string") {
     return null;
   }
@@ -130,7 +150,7 @@ function getSafeRegistrationTableFromSlug(slug: string) {
 async function resolveActivityEventId(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   activitySlug: string,
-  requestedEventId?: string
+  requestedEventId?: string,
 ) {
   const normalizedRequestedEventId = (requestedEventId ?? "").trim();
 
@@ -142,7 +162,11 @@ async function resolveActivityEventId(
       .single();
 
     if (requestedEventError || !requestedEvent) {
-      return { ok: false as const, message: requestedEventError?.message ?? "Activity schedule is unavailable." };
+      return {
+        ok: false as const,
+        message:
+          requestedEventError?.message ?? "Activity schedule is unavailable.",
+      };
     }
 
     const linkedActivity = Array.isArray(requestedEvent.activities)
@@ -150,7 +174,10 @@ async function resolveActivityEventId(
       : requestedEvent.activities;
 
     if (linkedActivity?.slug !== activitySlug) {
-      return { ok: false as const, message: "The selected schedule does not match the requested activity." };
+      return {
+        ok: false as const,
+        message: "The selected schedule does not match the requested activity.",
+      };
     }
 
     return { ok: true as const, eventId: requestedEvent.id as string | null };
@@ -187,7 +214,10 @@ async function getExistingRegistrationEventIds(userId: string) {
   return new Set((existingRegistrations ?? []).map((row) => row.event_id));
 }
 
-export async function createRegistrationAction(_: ActionResponse, formData: FormData): Promise<ActionResponse> {
+export async function createRegistrationAction(
+  _: ActionResponse,
+  formData: FormData,
+): Promise<ActionResponse> {
   const user = await requireAuth();
 
   const eventIds = Array.from(
@@ -195,8 +225,8 @@ export async function createRegistrationAction(_: ActionResponse, formData: Form
       formData
         .getAll("event_ids")
         .map((value) => String(value))
-        .filter(Boolean)
-    )
+        .filter(Boolean),
+    ),
   );
 
   if (eventIds.length === 0) {
@@ -220,12 +250,16 @@ export async function createRegistrationAction(_: ActionResponse, formData: Form
   });
 
   if (!parsed.success) {
-    return failure(parsed.error.issues[0]?.message ?? "Invalid registration payload.");
+    return failure(
+      parsed.error.issues[0]?.message ?? "Invalid registration payload.",
+    );
   }
 
   const supabase = await createSupabaseServerClient();
   const existingEventIds = await getExistingRegistrationEventIds(user.id);
-  const newEventIds = parsed.data.event_ids.filter((eventId) => !existingEventIds.has(eventId));
+  const newEventIds = parsed.data.event_ids.filter(
+    (eventId) => !existingEventIds.has(eventId),
+  );
   if (newEventIds.length === 0) {
     return failure("You are already registered for the selected event(s).");
   }
@@ -241,13 +275,21 @@ export async function createRegistrationAction(_: ActionResponse, formData: Form
 
   const openEventIds = new Set(
     (events ?? [])
-      .filter((event) => event.is_registration_open && ["scheduled", "live"].includes(event.status))
-      .map((event) => event.id)
+      .filter(
+        (event) =>
+          event.is_registration_open &&
+          ["scheduled", "live"].includes(event.status),
+      )
+      .map((event) => event.id),
   );
 
-  const blockedEventIds = newEventIds.filter((eventId) => !openEventIds.has(eventId));
+  const blockedEventIds = newEventIds.filter(
+    (eventId) => !openEventIds.has(eventId),
+  );
   if (blockedEventIds.length > 0) {
-    return failure("Some selected events are closed or not available for registration.");
+    return failure(
+      "Some selected events are closed or not available for registration.",
+    );
   }
 
   const payload = newEventIds.map((eventId) => ({
@@ -270,7 +312,9 @@ export async function createRegistrationAction(_: ActionResponse, formData: Form
     registration_details: {},
   }));
 
-  const { error } = await supabase.from("registrations").upsert(payload, { onConflict: "user_id,event_id" });
+  const { error } = await supabase
+    .from("registrations")
+    .upsert(payload, { onConflict: "user_id,event_id" });
 
   if (error) {
     return failure(error.message);
@@ -283,7 +327,7 @@ export async function createRegistrationAction(_: ActionResponse, formData: Form
 
 export async function createActivityRegistrationAction(
   _: ActionResponse,
-  formData: FormData
+  formData: FormData,
 ): Promise<ActionResponse> {
   // Guest-friendly: user may be null. requireAuth() must NOT be called here
   // because it calls redirect() which throws — and that throw must never be
@@ -293,14 +337,17 @@ export async function createActivityRegistrationAction(
 
   const { parsed, details } = parseActivityRegistrationPayload(formData);
   if (!parsed.success) {
-    return failure(parsed.error.issues[0]?.message ?? "Invalid activity registration payload.");
+    return failure(
+      parsed.error.issues[0]?.message ??
+        "Invalid activity registration payload.",
+    );
   }
 
   const detailsValidationError = validateActivitySpecificDetails(
     parsed.data.activity_slug,
     parsed.data.category_type,
     parsed.data.registration_details ?? details,
-    parsed.data.preferred_role ?? ""
+    parsed.data.preferred_role ?? "",
   );
   if (detailsValidationError) {
     return failure(detailsValidationError);
@@ -309,13 +356,21 @@ export async function createActivityRegistrationAction(
   // For collective sports, use profile gender if available, otherwise accept
   // whatever the user submitted from the form.
   if (parsed.data.category_type === "collective_sport") {
-    const normalizedProfileCategory = normalizeProfileGenderToCategory(profile?.gender);
+    const normalizedProfileCategory = normalizeProfileGenderToCategory(
+      profile?.gender,
+    );
     if (normalizedProfileCategory) {
       // Logged-in user with a profile gender: lock to their gender.
       details.gender = normalizedProfileCategory;
     } else {
       // Guest or profile without gender: use what was submitted.
-      const submittedGender = (parsed.data.registration_details?.gender ?? details.gender ?? "").trim().toLowerCase();
+      const submittedGender = (
+        parsed.data.registration_details?.gender ??
+        details.gender ??
+        ""
+      )
+        .trim()
+        .toLowerCase();
       if (!submittedGender) {
         return failure("Please select a gender category for this team sport.");
       }
@@ -323,7 +378,9 @@ export async function createActivityRegistrationAction(
     }
   }
 
-  const registrationTable = getSafeRegistrationTableFromSlug(parsed.data.activity_slug);
+  const registrationTable = getSafeRegistrationTableFromSlug(
+    parsed.data.activity_slug,
+  );
   if (!registrationTable) {
     return failure("This activity is currently unavailable for registration.");
   }
@@ -343,7 +400,11 @@ export async function createActivityRegistrationAction(
     }
   }
 
-  const resolvedEventState = await resolveActivityEventId(supabase, parsed.data.activity_slug, parsed.data.event_id);
+  const resolvedEventState = await resolveActivityEventId(
+    supabase,
+    parsed.data.activity_slug,
+    parsed.data.event_id,
+  );
   if (!resolvedEventState.ok) {
     return failure(resolvedEventState.message);
   }
@@ -373,46 +434,88 @@ export async function createActivityRegistrationAction(
     registrationTable.includes("handball") ||
     registrationTable.includes("volleyball")
   ) {
-    typedDetails.detail_gender = (parsed.data.registration_details?.gender ?? details.gender ?? "").trim() || null;
+    typedDetails.detail_gender =
+      (
+        parsed.data.registration_details?.gender ??
+        details.gender ??
+        ""
+      ).trim() || null;
   }
   if (registrationTable.includes("chess")) {
-    typedDetails.detail_elo_rating = (parsed.data.registration_details?.elo_rating ?? details.elo_rating ?? "").trim() || null;
+    typedDetails.detail_elo_rating =
+      (
+        parsed.data.registration_details?.elo_rating ??
+        details.elo_rating ??
+        ""
+      ).trim() || null;
     typedDetails.detail_participated_before = normalizeDetailBoolean(
-      parsed.data.registration_details?.participated_before ?? details.participated_before
+      parsed.data.registration_details?.participated_before ??
+        details.participated_before,
     );
   }
   if (registrationTable.includes("running")) {
     typedDetails.detail_running_distance =
-      (parsed.data.registration_details?.running_distance ?? details.running_distance ?? "").trim() || null;
+      (
+        parsed.data.registration_details?.running_distance ??
+        details.running_distance ??
+        ""
+      ).trim() || null;
     typedDetails.detail_joined_marathon_before = normalizeDetailBoolean(
-      parsed.data.registration_details?.joined_marathon_before ?? details.joined_marathon_before
+      parsed.data.registration_details?.joined_marathon_before ??
+        details.joined_marathon_before,
     );
   }
   if (registrationTable.includes("talent_show")) {
-    typedDetails.detail_talent_type = (parsed.data.registration_details?.talent_type ?? details.talent_type ?? "").trim() || null;
+    typedDetails.detail_talent_type =
+      (
+        parsed.data.registration_details?.talent_type ??
+        details.talent_type ??
+        ""
+      ).trim() || null;
     typedDetails.detail_talent_type_other =
-      (parsed.data.registration_details?.talent_type_other ?? details.talent_type_other ?? "").trim() || null;
+      (
+        parsed.data.registration_details?.talent_type_other ??
+        details.talent_type_other ??
+        ""
+      ).trim() || null;
     typedDetails.detail_performance_description =
-      (parsed.data.registration_details?.performance_description ?? details.performance_description ?? "").trim() || null;
+      (
+        parsed.data.registration_details?.performance_description ??
+        details.performance_description ??
+        ""
+      ).trim() || null;
     typedDetails.detail_participated_before = normalizeDetailBoolean(
-      parsed.data.registration_details?.participated_before ?? details.participated_before
+      parsed.data.registration_details?.participated_before ??
+        details.participated_before,
     );
   }
   if (registrationTable.includes("art_exhibition")) {
-    typedDetails.detail_art_category = (parsed.data.registration_details?.art_category ?? details.art_category ?? "").trim();
+    typedDetails.detail_art_category = (
+      parsed.data.registration_details?.art_category ??
+      details.art_category ??
+      ""
+    ).trim();
     typedDetails.detail_participated_before = normalizeDetailBoolean(
-      parsed.data.registration_details?.participated_before ?? details.participated_before
+      parsed.data.registration_details?.participated_before ??
+        details.participated_before,
     );
   }
   if (registrationTable.includes("writing_contest")) {
     typedDetails.detail_writing_category =
-      (parsed.data.registration_details?.writing_category ?? details.writing_category ?? "").trim() || null;
+      (
+        parsed.data.registration_details?.writing_category ??
+        details.writing_category ??
+        ""
+      ).trim() || null;
     typedDetails.detail_participated_before = normalizeDetailBoolean(
-      parsed.data.registration_details?.participated_before ?? details.participated_before
+      parsed.data.registration_details?.participated_before ??
+        details.participated_before,
     );
   }
 
-  const { error } = await supabase.from(registrationTable).insert({ ...basePayload, ...typedDetails });
+  const { error } = await supabase
+    .from(registrationTable)
+    .insert({ ...basePayload, ...typedDetails });
   if (error) {
     if (error.message.toLowerCase().includes("duplicate")) {
       return failure("You are already registered for this activity.");
@@ -420,14 +523,18 @@ export async function createActivityRegistrationAction(
     return failure(error.message);
   }
 
-  revalidateMany([`/register/${parsed.data.activity_slug}`, "/register", "/profile"]);
+  revalidateMany([
+    `/register/${parsed.data.activity_slug}`,
+    "/register",
+    "/profile",
+  ]);
   revalidateAdminRegistrationPages();
   return success("Registration submitted and saved successfully.");
 }
 
 export async function updateActivityRegistrationAction(
   _: ActionResponse,
-  formData: FormData
+  formData: FormData,
 ): Promise<ActionResponse> {
   // Update requires an authenticated user since only the owner can edit.
   // requireAuth() must NOT be inside try/catch — its redirect() throw must propagate.
@@ -440,25 +547,36 @@ export async function updateActivityRegistrationAction(
 
   const { parsed, details } = parseActivityRegistrationPayload(formData);
   if (!parsed.success) {
-    return failure(parsed.error.issues[0]?.message ?? "Invalid activity registration payload.");
+    return failure(
+      parsed.error.issues[0]?.message ??
+        "Invalid activity registration payload.",
+    );
   }
 
   const detailsValidationError = validateActivitySpecificDetails(
     parsed.data.activity_slug,
     parsed.data.category_type,
     parsed.data.registration_details ?? details,
-    parsed.data.preferred_role ?? ""
+    parsed.data.preferred_role ?? "",
   );
   if (detailsValidationError) {
     return failure(detailsValidationError);
   }
 
   if (parsed.data.category_type === "collective_sport") {
-    const normalizedProfileCategory = normalizeProfileGenderToCategory(profile?.gender);
+    const normalizedProfileCategory = normalizeProfileGenderToCategory(
+      profile?.gender,
+    );
     if (normalizedProfileCategory) {
       details.gender = normalizedProfileCategory;
     } else {
-      const submittedGender = (parsed.data.registration_details?.gender ?? details.gender ?? "").trim().toLowerCase();
+      const submittedGender = (
+        parsed.data.registration_details?.gender ??
+        details.gender ??
+        ""
+      )
+        .trim()
+        .toLowerCase();
       if (!submittedGender) {
         return failure("Please select a gender category for this team sport.");
       }
@@ -466,7 +584,9 @@ export async function updateActivityRegistrationAction(
     }
   }
 
-  const registrationTable = getSafeRegistrationTableFromSlug(parsed.data.activity_slug);
+  const registrationTable = getSafeRegistrationTableFromSlug(
+    parsed.data.activity_slug,
+  );
   if (!registrationTable) {
     return failure("This activity is currently unavailable for registration.");
   }
@@ -494,42 +614,82 @@ export async function updateActivityRegistrationAction(
     registrationTable.includes("handball") ||
     registrationTable.includes("volleyball")
   ) {
-    typedDetails.detail_gender = (parsed.data.registration_details?.gender ?? details.gender ?? "").trim() || null;
+    typedDetails.detail_gender =
+      (
+        parsed.data.registration_details?.gender ??
+        details.gender ??
+        ""
+      ).trim() || null;
   }
   if (registrationTable.includes("chess")) {
-    typedDetails.detail_elo_rating = (parsed.data.registration_details?.elo_rating ?? details.elo_rating ?? "").trim() || null;
+    typedDetails.detail_elo_rating =
+      (
+        parsed.data.registration_details?.elo_rating ??
+        details.elo_rating ??
+        ""
+      ).trim() || null;
     typedDetails.detail_participated_before = normalizeDetailBoolean(
-      parsed.data.registration_details?.participated_before ?? details.participated_before
+      parsed.data.registration_details?.participated_before ??
+        details.participated_before,
     );
   }
   if (registrationTable.includes("running")) {
     typedDetails.detail_running_distance =
-      (parsed.data.registration_details?.running_distance ?? details.running_distance ?? "").trim() || null;
+      (
+        parsed.data.registration_details?.running_distance ??
+        details.running_distance ??
+        ""
+      ).trim() || null;
     typedDetails.detail_joined_marathon_before = normalizeDetailBoolean(
-      parsed.data.registration_details?.joined_marathon_before ?? details.joined_marathon_before
+      parsed.data.registration_details?.joined_marathon_before ??
+        details.joined_marathon_before,
     );
   }
   if (registrationTable.includes("talent_show")) {
-    typedDetails.detail_talent_type = (parsed.data.registration_details?.talent_type ?? details.talent_type ?? "").trim() || null;
+    typedDetails.detail_talent_type =
+      (
+        parsed.data.registration_details?.talent_type ??
+        details.talent_type ??
+        ""
+      ).trim() || null;
     typedDetails.detail_talent_type_other =
-      (parsed.data.registration_details?.talent_type_other ?? details.talent_type_other ?? "").trim() || null;
+      (
+        parsed.data.registration_details?.talent_type_other ??
+        details.talent_type_other ??
+        ""
+      ).trim() || null;
     typedDetails.detail_performance_description =
-      (parsed.data.registration_details?.performance_description ?? details.performance_description ?? "").trim() || null;
+      (
+        parsed.data.registration_details?.performance_description ??
+        details.performance_description ??
+        ""
+      ).trim() || null;
     typedDetails.detail_participated_before = normalizeDetailBoolean(
-      parsed.data.registration_details?.participated_before ?? details.participated_before
+      parsed.data.registration_details?.participated_before ??
+        details.participated_before,
     );
   }
   if (registrationTable.includes("art_exhibition")) {
-    typedDetails.detail_art_category = (parsed.data.registration_details?.art_category ?? details.art_category ?? "").trim();
+    typedDetails.detail_art_category = (
+      parsed.data.registration_details?.art_category ??
+      details.art_category ??
+      ""
+    ).trim();
     typedDetails.detail_participated_before = normalizeDetailBoolean(
-      parsed.data.registration_details?.participated_before ?? details.participated_before
+      parsed.data.registration_details?.participated_before ??
+        details.participated_before,
     );
   }
   if (registrationTable.includes("writing_contest")) {
     typedDetails.detail_writing_category =
-      (parsed.data.registration_details?.writing_category ?? details.writing_category ?? "").trim() || null;
+      (
+        parsed.data.registration_details?.writing_category ??
+        details.writing_category ??
+        ""
+      ).trim() || null;
     typedDetails.detail_participated_before = normalizeDetailBoolean(
-      parsed.data.registration_details?.participated_before ?? details.participated_before
+      parsed.data.registration_details?.participated_before ??
+        details.participated_before,
     );
   }
 
@@ -558,12 +718,18 @@ export async function updateActivityRegistrationAction(
     return failure(error.message);
   }
 
-  revalidateMany([`/register/${parsed.data.activity_slug}`, "/register", "/profile"]);
+  revalidateMany([
+    `/register/${parsed.data.activity_slug}`,
+    "/register",
+    "/profile",
+  ]);
   revalidateAdminRegistrationPages();
   return success("Registration updated successfully.");
 }
 
-export async function deleteActivityRegistrationAction(formData: FormData): Promise<void> {
+export async function deleteActivityRegistrationAction(
+  formData: FormData,
+): Promise<void> {
   const user = await requireAuth();
   const registrationId = String(formData.get("registration_id") ?? "");
   const activitySlug = String(formData.get("activity_slug") ?? "");
@@ -588,25 +754,38 @@ export async function deleteActivityRegistrationAction(formData: FormData): Prom
     return;
   }
 
-  await supabase.from(registrationTable).delete().eq("id", registrationId).eq("user_id", user.id);
+  await supabase
+    .from(registrationTable)
+    .delete()
+    .eq("id", registrationId)
+    .eq("user_id", user.id);
 
   revalidateMany([`/register/${activitySlug}`, "/register", "/profile"]);
   revalidateAdminRegistrationPages();
 }
 
-export async function updateRegistrationStatusAction(formData: FormData): Promise<void> {
+export async function updateRegistrationStatusAction(
+  formData: FormData,
+): Promise<void> {
   await requireAdmin();
 
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
   const registrationTable = String(formData.get("registration_table") ?? "");
   const allowedTables = new Set(getAllowedActivityRegistrationTables());
-  if (!id || !["pending", "approved", "rejected"].includes(status) || !allowedTables.has(registrationTable)) {
+  if (
+    !id ||
+    !["pending", "approved", "rejected"].includes(status) ||
+    !allowedTables.has(registrationTable)
+  ) {
     return;
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from(registrationTable).update({ status }).eq("id", id);
+  const { error } = await supabase
+    .from(registrationTable)
+    .update({ status })
+    .eq("id", id);
   if (error) {
     return;
   }
@@ -618,7 +797,7 @@ export async function updateRegistrationStatusAction(formData: FormData): Promis
 
 export async function updateRegistrationStatusWithFeedbackAction(
   _: ActionResponse,
-  formData: FormData
+  formData: FormData,
 ): Promise<ActionResponse> {
   try {
     await requireAdmin();
@@ -627,12 +806,19 @@ export async function updateRegistrationStatusWithFeedbackAction(
     const registrationTable = String(formData.get("registration_table") ?? "");
     const allowedTables = new Set(getAllowedActivityRegistrationTables());
 
-    if (!id || !["pending", "approved", "rejected"].includes(status) || !allowedTables.has(registrationTable)) {
+    if (
+      !id ||
+      !["pending", "approved", "rejected"].includes(status) ||
+      !allowedTables.has(registrationTable)
+    ) {
       return failure("Invalid registration status payload.");
     }
 
     const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.from(registrationTable).update({ status }).eq("id", id);
+    const { error } = await supabase
+      .from(registrationTable)
+      .update({ status })
+      .eq("id", id);
     if (error) {
       return failure(error.message);
     }
@@ -643,11 +829,15 @@ export async function updateRegistrationStatusWithFeedbackAction(
 
     return success("Registration status updated.");
   } catch (error) {
-    return failure(error instanceof Error ? error.message : "Failed to update status.");
+    return failure(
+      error instanceof Error ? error.message : "Failed to update status.",
+    );
   }
 }
 
-export async function deleteRegistrationAdminAction(formData: FormData): Promise<void> {
+export async function deleteRegistrationAdminAction(
+  formData: FormData,
+): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("registration_id") ?? "");
   const registrationTable = String(formData.get("registration_table") ?? "");
@@ -657,7 +847,10 @@ export async function deleteRegistrationAdminAction(formData: FormData): Promise
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from(registrationTable).delete().eq("id", id);
+  const { error } = await supabase
+    .from(registrationTable)
+    .delete()
+    .eq("id", id);
   if (error) {
     return;
   }
@@ -667,7 +860,9 @@ export async function deleteRegistrationAdminAction(formData: FormData): Promise
   revalidateMany(["/profile"]);
 }
 
-export async function assignRegistrationTeamAction(formData: FormData): Promise<void> {
+export async function assignRegistrationTeamAction(
+  formData: FormData,
+): Promise<void> {
   await requireAdmin();
 
   const registrationId = String(formData.get("registration_id") ?? "");
@@ -682,7 +877,11 @@ export async function assignRegistrationTeamAction(formData: FormData): Promise<
   const supabase = await createSupabaseServerClient();
   let teamName: string | null = null;
   if (teamId) {
-    const { data: team } = await supabase.from("teams").select("id,name").eq("id", teamId).single();
+    const { data: team } = await supabase
+      .from("teams")
+      .select("id,name")
+      .eq("id", teamId)
+      .single();
     teamName = team?.name ?? null;
   }
 
@@ -699,22 +898,56 @@ export async function assignRegistrationTeamAction(formData: FormData): Promise<
   if (error || !registration) {
     return;
   }
-
   if (teamId && registration.profile_id) {
-    await supabase.from("team_memberships").upsert(
-      {
+    const { data: existing } = await supabase
+      .from("team_memberships")
+      .select("id")
+      .eq("team_id", teamId)
+      .eq("profile_id", registration.profile_id)
+      .maybeSingle();
+
+    if (!existing) {
+      await supabase.from("team_memberships").insert({
         team_id: teamId,
         profile_id: registration.profile_id,
         role: membershipRole || "player",
-      },
-      { onConflict: "team_id,profile_id" }
-    );
+      });
+    }
+  } else if (teamId && !registration.profile_id) {
+    const { data: existing } = await supabase
+      .from("team_memberships")
+      .select("id")
+      .eq("team_id", teamId)
+      .eq("registration_id", registrationId)
+      .maybeSingle();
+
+    if (!existing) {
+      const { data: reg } = await supabase
+        .from(registrationTable)
+        .select("full_name, email")
+        .eq("id", registrationId)
+        .single();
+
+      await supabase.from("team_memberships").insert({
+        team_id: teamId,
+        registration_id: registrationId,
+        profile_id: null,
+        guest_name: reg?.full_name ?? null,
+        guest_email: reg?.email ?? null,
+        role: membershipRole || "player",
+      });
+    }
   }
 
-  await logAdminAction("registration_assign_team", "registration", registrationId, {
-    registration_table: registrationTable,
-    team_id: teamId || null,
-  });
+  await logAdminAction(
+    "registration_assign_team",
+    "registration",
+    registrationId,
+    {
+      registration_table: registrationTable,
+      team_id: teamId || null,
+    },
+  );
 
   revalidateAdminRegistrationPages();
   revalidateMany(["/admin/schedule", "/profile"]);
@@ -722,7 +955,7 @@ export async function assignRegistrationTeamAction(formData: FormData): Promise<
 
 export async function assignRegistrationTeamWithFeedbackAction(
   _: ActionResponse,
-  formData: FormData
+  formData: FormData,
 ): Promise<ActionResponse> {
   try {
     await requireAdmin();
@@ -739,7 +972,11 @@ export async function assignRegistrationTeamWithFeedbackAction(
     const supabase = await createSupabaseServerClient();
     let teamName: string | null = null;
     if (teamId) {
-      const { data: team } = await supabase.from("teams").select("id,name").eq("id", teamId).single();
+      const { data: team } = await supabase
+        .from("teams")
+        .select("id,name")
+        .eq("id", teamId)
+        .single();
       teamName = team?.name ?? null;
     }
 
@@ -764,20 +1001,52 @@ export async function assignRegistrationTeamWithFeedbackAction(
           profile_id: registration.profile_id,
           role: membershipRole || "player",
         },
-        { onConflict: "team_id,profile_id" }
+        { onConflict: "team_id,profile_id" },
       );
+      // AFTER (fixed — mirrors the working pattern from team-memberships.ts)
+    } else if (teamId && !registration.profile_id) {
+      const { data: existing } = await supabase
+        .from("team_memberships")
+        .select("id")
+        .eq("team_id", teamId)
+        .eq("registration_id", registrationId)
+        .maybeSingle();
+
+      if (!existing) {
+        const { data: reg } = await supabase
+          .from(registrationTable)
+          .select("full_name, email")
+          .eq("id", registrationId)
+          .single();
+
+        await supabase.from("team_memberships").insert({
+          team_id: teamId,
+          registration_id: registrationId,
+          profile_id: null,
+          guest_name: reg?.full_name ?? null,
+          guest_email: reg?.email ?? null,
+          role: membershipRole || "player",
+        });
+      }
     }
 
-    await logAdminAction("registration_assign_team", "registration", registrationId, {
-      registration_table: registrationTable,
-      team_id: teamId || null,
-    });
+    await logAdminAction(
+      "registration_assign_team",
+      "registration",
+      registrationId,
+      {
+        registration_table: registrationTable,
+        team_id: teamId || null,
+      },
+    );
 
     revalidateAdminRegistrationPages();
-    revalidateMany(["/admin/schedule", "/profile"]);
+    revalidateMany(["/admin/schedule", "/admin/teams", "/profile"]);
 
     return success("Team assignment updated.");
   } catch (error) {
-    return failure(error instanceof Error ? error.message : "Failed to assign team.");
+    return failure(
+      error instanceof Error ? error.message : "Failed to assign team.",
+    );
   }
 }

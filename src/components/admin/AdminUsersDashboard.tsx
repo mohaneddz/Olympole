@@ -14,7 +14,6 @@ type ProfileRow = {
   email: string;
   school: string | null;
   year_of_study: string | null;
-  student_id: string | null;
   username: string | null;
   phone: string | null;
   avatar_url: string | null;
@@ -46,7 +45,7 @@ export function AdminUsersDashboard({ profiles }: { profiles: ProfileRow[] }) {
         maxRowsPerPage={40}
         rowsPerPageOptions={[5, 10, 20, 40]}
         searchPlaceholder="Search users by name/email/school..."
-        searchKeys={["full_name", "email", "school", "username", "phone", "student_id"]}
+        searchKeys={["full_name", "email", "school", "username", "phone"]}
         filters={[
           {
             key: "role",
@@ -68,13 +67,21 @@ export function AdminUsersDashboard({ profiles }: { profiles: ProfileRow[] }) {
                 <div className="relative h-10 w-10 overflow-hidden rounded-full border border-card-border">
                   {row.avatar_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={row.avatar_url} alt={row.full_name ?? row.email} className="h-full w-full object-cover" />
+                    <img
+                      src={row.avatar_url}
+                      alt={row.full_name ?? row.email}
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
-                    <div className="grid h-full w-full place-items-center text-xs text-foreground/60">N/A</div>
+                    <div className="grid h-full w-full place-items-center text-xs text-foreground/60">
+                      N/A
+                    </div>
                   )}
                 </div>
                 <div>
-                  <p className="font-semibold">{row.full_name ?? "Unknown user"}</p>
+                  <p className="font-semibold">
+                    {row.full_name ?? "Unknown user"}
+                  </p>
                   <p className="text-xs text-foreground/60">{row.email}</p>
                 </div>
               </div>
@@ -84,13 +91,8 @@ export function AdminUsersDashboard({ profiles }: { profiles: ProfileRow[] }) {
             key: "school",
             label: "School / Year",
             sortable: true,
-            render: (row) => `${row.school ?? "-"} / ${row.year_of_study ?? "-"}`,
-          },
-          {
-            key: "student_id",
-            label: "Student ID",
-            sortable: true,
-            render: (row) => row.student_id ?? "-",
+            render: (row) =>
+              `${row.school ?? "-"} / ${row.year_of_study ?? "-"}`,
           },
           {
             key: "username",
@@ -153,16 +155,36 @@ export function AdminUsersDashboard({ profiles }: { profiles: ProfileRow[] }) {
                 name="full_name"
                 defaultValue={editingRow.full_name ?? ""}
                 required
+                placeholder="Full name"
                 className="h-10 w-full rounded border border-card-border bg-background px-3"
               />
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <input name="school" defaultValue={editingRow.school ?? ""} className="h-10 rounded border border-card-border bg-background px-3" />
-                <input name="year_of_study" defaultValue={editingRow.year_of_study ?? ""} className="h-10 rounded border border-card-border bg-background px-3" />
-                <input name="student_id" defaultValue={editingRow.student_id ?? ""} className="h-10 rounded border border-card-border bg-background px-3" />
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <input
+                  name="school"
+                  defaultValue={editingRow.school ?? ""}
+                  placeholder="School"
+                  className="h-10 rounded border border-card-border bg-background px-3"
+                />
+                <input
+                  name="year_of_study"
+                  defaultValue={editingRow.year_of_study ?? ""}
+                  placeholder="Year of study"
+                  className="h-10 rounded border border-card-border bg-background px-3"
+                />
               </div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <input name="username" defaultValue={editingRow.username ?? ""} className="h-10 rounded border border-card-border bg-background px-3" />
-                <input name="phone" defaultValue={editingRow.phone ?? ""} className="h-10 rounded border border-card-border bg-background px-3" />
+                <input
+                  name="username"
+                  defaultValue={editingRow.username ?? ""}
+                  placeholder="Username"
+                  className="h-10 rounded border border-card-border bg-background px-3"
+                />
+                <input
+                  name="phone"
+                  defaultValue={editingRow.phone ?? ""}
+                  placeholder="Phone"
+                  className="h-10 rounded border border-card-border bg-background px-3"
+                />
               </div>
               <input
                 name="avatar_url"
@@ -170,7 +192,11 @@ export function AdminUsersDashboard({ profiles }: { profiles: ProfileRow[] }) {
                 placeholder="Avatar URL"
                 className="h-10 w-full rounded border border-card-border bg-background px-3"
               />
-              <select name="role" defaultValue={editingRow.role} className="h-10 w-full rounded border border-card-border bg-background px-3">
+              <select
+                name="role"
+                defaultValue={editingRow.role}
+                className="h-10 w-full rounded border border-card-border bg-background px-3"
+              >
                 <option value="participant">participant</option>
                 <option value="admin">admin</option>
                 <option value="viewer">viewer</option>

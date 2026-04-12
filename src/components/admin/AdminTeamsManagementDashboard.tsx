@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { syncTeamMembersAction } from "@/server/team-memberships";
-import { createTeamAction, deleteTeamAction, updateTeamAction } from "@/server/teams";
+import { assignGuestRegistrationToTeamAction } from "@/server/team-memberships";
+import {
+  createTeamAction,
+  deleteTeamAction,
+  updateTeamAction,
+} from "@/server/teams";
 import { AdminDataTable } from "@/components/admin/AdminDataTable";
 import { Pencil, Plus, Trash2, Users, X } from "lucide-react";
 
@@ -22,6 +27,9 @@ type TeamRow = {
 
 type ProfileOption = {
   id: string;
+  isGuest?: boolean;
+  registrationId?: string;
+  activitySlug?: string;
   label: string;
 };
 
@@ -29,7 +37,10 @@ type MembershipRow = {
   id: string;
   team_id: string;
   team_name: string;
-  profile_id: string;
+  profile_id: string | null;
+  registration_id: string | null;
+  guest_name: string | null;
+  guest_email: string | null;
   profile_name: string;
   role: string;
   created_at: string;
@@ -79,7 +90,9 @@ function TeamFormDialog({
         </div>
 
         <form action={handleSubmit} className="space-y-3">
-          {initial ? <input type="hidden" name="id" value={initial.id} /> : null}
+          {initial ? (
+            <input type="hidden" name="id" value={initial.id} />
+          ) : null}
 
           <input
             name="name"
@@ -88,19 +101,6 @@ function TeamFormDialog({
             placeholder="Team name"
             className="h-10 w-full rounded border border-card-border bg-background px-3"
           />
-
-          <select
-            name="category"
-            required
-            defaultValue={initial?.category ?? "collective"}
-            className="h-10 w-full rounded border border-card-border bg-background px-3"
-          >
-            {categoryOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
 
           <select
             name="sport_id"
@@ -133,7 +133,6 @@ function TeamFormDialog({
     </div>
   );
 }
-
 function TeamMembersDialog({
   team,
   profiles,
@@ -145,15 +144,56 @@ function TeamMembersDialog({
   memberships: MembershipRow[];
   onClose: () => void;
 }) {
+  const currentMembers = memberships.filter((m) => m.team_id === team.id);
+
   const [memberProfileIds, setMemberProfileIds] = useState<string[]>(() => {
-    const ids = memberships
-      .filter((membership) => membership.team_id === team.id)
-      .map((membership) => membership.profile_id);
+    const ids = currentMembers
+      .map((m) => {
+        if (!m.profile_id && m.registration_id)
+          return `reg:${m.registration_id}`;
+        return m.profile_id ?? "";
+      })
+      .filter(Boolean);
     return ids.length > 0 ? ids : [""];
   });
 
-  const handleSubmit = async (formData: FormData) => {
-    await syncTeamMembersAction(formData);
+  const handleSubmit = async () => {
+    const profileIds = memberProfileIds.filter(
+      (id) => id.length > 0 && !id.startsWith("reg:"),
+    );
+    const guestEntries = memberProfileIds
+      .filter((id) => id.startsWith("reg:"))
+      .map((id) => {
+        const registrationId = id.replace("reg:", "");
+        const option = profiles.find((p) => p.id === id);
+        return { registrationId, activitySlug: option?.activitySlug ?? "" };
+      });
+
+    const profileFormData = new FormData();
+    profileFormData.set("team_id", team.id);
+    for (const profileId of profileIds) {
+      profileFormData.append("member_profile_id", profileId);
+    }
+    await syncTeamMembersAction(profileFormData);
+
+    for (const guest of guestEntries) {
+      const guestFormData = new FormData();
+      guestFormData.set("team_id", team.id);
+      guestFormData.set("registration_id", guest.registrationId);
+      guestFormData.set(
+        "registration_table",
+        `activity_registrations_${guest.activitySlug.replace(/-/g, "_")}`,
+      );
+      const option = profiles.find(
+        (p) => p.registrationId === guest.registrationId,
+      );
+      guestFormData.set(
+        "guest_name",
+        option?.label.replace(/^\[Guest\] /, "").split(" (")[0] ?? "",
+      );
+      await assignGuestRegistrationToTeamAction(guestFormData);
+    }
+
     onClose();
   };
 
@@ -174,20 +214,48 @@ function TeamMembersDialog({
           </button>
         </div>
 
-        <form action={handleSubmit} className="space-y-3">
-          <input type="hidden" name="team_id" value={team.id} />
+        <div className="space-y-4">
+          {/* Currently assigned members — read-only overview */}
+          {currentMembers.length > 0 ? (
+            <div className="rounded-xl border border-cyan-300/15 bg-cyan-400/5 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-cyan-300/70">
+                Currently assigned ({currentMembers.length})
+              </p>
+              <ul className="space-y-1">
+                {currentMembers.map((m) => (
+                  <li
+                    key={m.id}
+                    className="flex items-center gap-2 text-sm text-cyan-100/80"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-400/60" />
+                    <span>{m.profile_name}</span>
+                    <span className="text-xs text-cyan-300/40">· {m.role}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="text-sm text-cyan-100/40">No members assigned yet.</p>
+          )}
 
+          {/* Editable member picker */}
           <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300/70">
+              Edit roster
+            </p>
             {memberProfileIds.map((profileId, index) => (
-              <div key={`${index}-${profileId}`} className="flex items-center gap-2">
+              <div
+                key={`${index}-${profileId}`}
+                className="flex items-center gap-2"
+              >
                 <select
-                  name="member_profile_id"
-                  required
                   value={profileId}
                   onChange={(event) => {
                     const value = event.target.value;
                     setMemberProfileIds((current) =>
-                      current.map((entry, currentIndex) => (currentIndex === index ? value : entry))
+                      current.map((entry, currentIndex) =>
+                        currentIndex === index ? value : entry,
+                      ),
                     );
                   }}
                   className="h-10 w-full rounded border border-card-border bg-background px-3"
@@ -204,10 +272,8 @@ function TeamMembersDialog({
                   type="button"
                   onClick={() => {
                     setMemberProfileIds((current) => {
-                      if (current.length === 1) {
-                        return [""];
-                      }
-                      return current.filter((_, currentIndex) => currentIndex !== index);
+                      if (current.length === 1) return [""];
+                      return current.filter((_, i) => i !== index);
                     });
                   }}
                   className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-red-500/60 text-red-300 hover:bg-red-500/15"
@@ -229,7 +295,11 @@ function TeamMembersDialog({
           </button>
 
           <div className="flex items-center gap-2 pt-1">
-            <button className="rounded-lg border border-cyan-300/45 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="rounded-lg border border-cyan-300/45 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100"
+            >
               Save Members
             </button>
             <button
@@ -240,12 +310,11 @@ function TeamMembersDialog({
               Cancel
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
 }
-
 export function CreateTeamButton({ sports }: { sports: SportOption[] }) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -305,7 +374,9 @@ export function AdminTeamsManagementDashboard({
           {
             key: "sport_name",
             label: "Sport",
-            options: Array.from(new Set(teams.map((team) => team.sport_name))).map((value) => ({
+            options: Array.from(
+              new Set(teams.map((team) => team.sport_name)),
+            ).map((value) => ({
               label: value,
               value,
             })),
@@ -317,7 +388,9 @@ export function AdminTeamsManagementDashboard({
             key: "category",
             label: "Category",
             sortable: true,
-            render: (row) => categoryOptions.find((option) => option.value === row.category)?.label ?? row.category,
+            render: (row) =>
+              categoryOptions.find((option) => option.value === row.category)
+                ?.label ?? row.category,
           },
           { key: "sport_name", label: "Sport", sortable: true },
           { key: "members_count", label: "Members", sortable: true },

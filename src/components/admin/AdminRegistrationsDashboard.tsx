@@ -62,7 +62,14 @@ export function AdminRegistrationsDashboard({
       maxRowsPerPage={40}
       rowsPerPageOptions={[5, 10, 20, 40]}
       searchPlaceholder="Search by name, email, activity, team..."
-      searchKeys={["full_name", "email", "activity_slug", "team_name", "previous_experience", "motivation"]}
+      searchKeys={[
+        "full_name",
+        "email",
+        "activity_slug",
+        "team_name",
+        "previous_experience",
+        "motivation",
+      ]}
       filters={[
         {
           key: "status",
@@ -101,7 +108,9 @@ export function AdminRegistrationsDashboard({
           sortable: true,
           render: (row) => (
             <div className="space-y-1">
-              <p className="text-sm font-medium">{row.activity_slug ?? row.event_slug ?? "-"}</p>
+              <p className="text-sm font-medium">
+                {row.activity_slug ?? row.event_slug ?? "-"}
+              </p>
               <p className="text-xs text-foreground/60">{row.category_type}</p>
             </div>
           ),
@@ -116,7 +125,10 @@ export function AdminRegistrationsDashboard({
           label: "Experience",
           sortable: true,
           render: (row) => (
-            <p className="max-w-xs truncate" title={row.previous_experience ?? "-"}>
+            <p
+              className="max-w-xs truncate"
+              title={row.previous_experience ?? "-"}
+            >
               {row.previous_experience ?? "-"}
             </p>
           ),
@@ -146,8 +158,16 @@ export function AdminRegistrationsDashboard({
       ]}
       renderActions={(row) => (
         <div className="space-y-2">
-          <form action={updateRegistrationStatusAction} className="flex items-center gap-2">
+          <form
+            action={updateRegistrationStatusAction}
+            className="flex items-center gap-2"
+          >
             <input type="hidden" name="id" value={row.id} />
+            <input
+              type="hidden"
+              name="registration_table"
+              value={`activity_registrations_${row.activity_slug?.replace(/-/g, "_")}`}
+            />
             <select
               name="status"
               defaultValue={row.status}
@@ -157,11 +177,21 @@ export function AdminRegistrationsDashboard({
               <option value="approved">approved</option>
               <option value="rejected">rejected</option>
             </select>
-            <button className="rounded-lg border border-card-border px-2 py-1 text-xs">Apply</button>
+            <button className="rounded-lg border border-card-border px-2 py-1 text-xs">
+              Apply
+            </button>
           </form>
 
-          <form action={assignRegistrationTeamAction} className="flex items-center gap-2">
+          <form
+            action={assignRegistrationTeamAction}
+            className="flex items-center gap-2"
+          >
             <input type="hidden" name="registration_id" value={row.id} />
+            <input
+              type="hidden"
+              name="registration_table"
+              value={`activity_registrations_${row.activity_slug?.replace(/-/g, "_")}`}
+            />
             <select
               name="team_id"
               defaultValue={row.team_id ?? ""}
@@ -175,23 +205,43 @@ export function AdminRegistrationsDashboard({
               ))}
             </select>
             <input type="hidden" name="membership_role" value="player" />
-            <button className="rounded-lg border border-card-border px-2 py-1 text-xs">Assign</button>
+            <button className="rounded-lg border border-card-border px-2 py-1 text-xs">
+              Assign
+            </button>
           </form>
 
           <details className="rounded-lg border border-card-border/70 p-2 text-xs">
-            <summary className="cursor-pointer text-foreground/80">View details</summary>
+            <summary className="cursor-pointer text-foreground/80">
+              View details
+            </summary>
             <div className="mt-2 space-y-1 text-foreground/70">
-              <p><span className="font-semibold">Phone:</span> {row.phone || "-"}</p>
-              <p><span className="font-semibold">School:</span> {row.department_or_school || "-"}</p>
-              <p><span className="font-semibold">Experience:</span> {row.previous_experience || "-"}</p>
-              <p><span className="font-semibold">Motivation:</span> {row.motivation || "-"}</p>
-              <p><span className="font-semibold">Availability:</span> {row.availability_date || "-"}</p>
+              <p>
+                <span className="font-semibold">Phone:</span> {row.phone || "-"}
+              </p>
+              <p>
+                <span className="font-semibold">School:</span>{" "}
+                {row.department_or_school || "-"}
+              </p>
+              <p>
+                <span className="font-semibold">Experience:</span>{" "}
+                {row.previous_experience || "-"}
+              </p>
+              <p>
+                <span className="font-semibold">Motivation:</span>{" "}
+                {row.motivation || "-"}
+              </p>
+              <p>
+                <span className="font-semibold">Availability:</span>{" "}
+                {row.availability_date || "-"}
+              </p>
             </div>
           </details>
 
           <form action={deleteRegistrationAdminAction}>
             <input type="hidden" name="registration_id" value={row.id} />
-            <button className="rounded-lg border border-red-500/60 px-2 py-1 text-xs text-red-300">Delete</button>
+            <button className="rounded-lg border border-red-500/60 px-2 py-1 text-xs text-red-300">
+              Delete
+            </button>
           </form>
         </div>
       )}

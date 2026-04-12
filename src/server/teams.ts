@@ -20,14 +20,10 @@ export async function createTeamAction(formData: FormData): Promise<void> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("teams")
-    .upsert(
-      {
-        sport_id: parsed.data.sport_id,
-        name: parsed.data.name,
-        category: parsed.data.category,
-      },
-      { onConflict: "sport_id,name" }
-    )
+    .insert({
+      sport_id: parsed.data.sport_id,
+      name: parsed.data.name,
+    })
     .select("id")
     .single();
 

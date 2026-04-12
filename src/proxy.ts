@@ -15,7 +15,8 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const isServerActionRequest = request.method === "POST" && request.headers.has("next-action");
+  const isServerActionRequest =
+    request.method === "POST" && request.headers.has("next-action");
   if (isServerActionRequest) {
     return response;
   }
@@ -37,50 +38,27 @@ export async function proxy(request: NextRequest) {
           }
         },
       },
-    }
+    },
   );
 
   const { data } = await supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
   const isBypassPath =
-    pathname.startsWith("/onboarding")
-    || pathname.startsWith("/api")
-    || pathname.startsWith("/login");
+    pathname.startsWith("/api") || pathname.startsWith("/login");
 
-  if ((pathname.startsWith("/admin") || pathname.startsWith("/profile")) && !data.user) {
+  if (
+    (pathname.startsWith("/admin") || pathname.startsWith("/profile")) &&
+    !data.user
+  ) {
     return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  if (data.user && !isBypassPath) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name, school, year_of_study, student_id")
-      .eq("id", data.user.id)
-      .single();
-
-    const isComplete = Boolean(
-      profile?.full_name?.trim()
-      && profile?.school?.trim()
-      && profile?.year_of_study?.trim()
-      && profile?.student_id?.trim()
-    );
-
-    if (!isComplete) {
-      return NextResponse.redirect(new URL("/onboarding", request.url));
-    }
   }
 
   if (pathname.startsWith("/admin") && data.user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, full_name, school, year_of_study, student_id")
+      .select("role")
       .eq("id", data.user.id)
       .single();
-
-    const isComplete = Boolean(profile?.full_name && profile?.school && profile?.year_of_study && profile?.student_id);
-    if (!isComplete) {
-      return NextResponse.redirect(new URL("/onboarding", request.url));
-    }
 
     if (profile?.role !== "admin") {
       return NextResponse.redirect(new URL("/profile", request.url));

@@ -5,27 +5,48 @@ import {
   ACTIVITY_REGISTRATION_MAX_PREVIOUS_EXPERIENCE,
 } from "@/lib/limits";
 
-const trimInput = (value: unknown) => (typeof value === "string" ? value.trim() : value);
+const trimInput = (value: unknown) =>
+  typeof value === "string" ? value.trim() : value;
 const uuid = z.preprocess(trimInput, z.string().uuid());
 const datetimeString = z
   .preprocess(trimInput, z.string().min(1))
-  .refine((value) => !Number.isNaN(Date.parse(value)), "Invalid date and time value.");
+  .refine(
+    (value) => !Number.isNaN(Date.parse(value)),
+    "Invalid date and time value.",
+  );
 
 const emailString = z.preprocess(trimInput, z.string().email().max(254));
 
 const requiredText = (min: number, max: number, label: string) =>
-  z.preprocess(trimInput, z.string().min(min, `${label} is too short.`).max(max, `${label} is too long.`));
+  z.preprocess(
+    trimInput,
+    z
+      .string()
+      .min(min, `${label} is too short.`)
+      .max(max, `${label} is too long.`),
+  );
 
-const optionalText = (max: number) => z.preprocess(trimInput, z.string().max(max)).optional().or(z.literal(""));
+const optionalText = (max: number) =>
+  z.preprocess(trimInput, z.string().max(max)).optional().or(z.literal(""));
 
 const requiredPhone = z.preprocess(
   normalizePhoneInput,
-  z.string().regex(phonePattern, "Phone number must be exactly 10 digits and start with 0.")
+  z
+    .string()
+    .regex(
+      phonePattern,
+      "Phone number must be exactly 10 digits and start with 0.",
+    ),
 );
 const optionalPhone = z
   .preprocess(
     normalizePhoneInput,
-    z.string().regex(phonePattern, "Phone number must be exactly 10 digits and start with 0.")
+    z
+      .string()
+      .regex(
+        phonePattern,
+        "Phone number must be exactly 10 digits and start with 0.",
+      ),
   )
   .optional()
   .or(z.literal(""));
@@ -50,15 +71,24 @@ export const activityRegistrationSchema = registrationSchema.extend({
   event_id: uuid.optional().or(z.literal("")),
   activity_slug: z.preprocess(
     trimInput,
-    z.string().min(2).max(80).regex(/^[a-z0-9-]+$/)
+    z
+      .string()
+      .min(2)
+      .max(80)
+      .regex(/^[a-z0-9-]+$/),
   ),
-  previous_experience: optionalText(ACTIVITY_REGISTRATION_MAX_PREVIOUS_EXPERIENCE),
+  previous_experience: optionalText(
+    ACTIVITY_REGISTRATION_MAX_PREVIOUS_EXPERIENCE,
+  ),
   motivation: optionalText(ACTIVITY_REGISTRATION_MAX_MOTIVATION),
   availability_date: z
     .preprocess(trimInput, z.string())
     .optional()
     .or(z.literal(""))
-    .refine((value) => !value || !Number.isNaN(Date.parse(value)), "Invalid availability date."),
+    .refine(
+      (value) => !value || !Number.isNaN(Date.parse(value)),
+      "Invalid availability date.",
+    ),
   preferred_role: optionalText(120),
   registration_details: z.record(z.string(), z.string()).optional(),
 });
@@ -68,7 +98,11 @@ export const eventSchema = z
     title: requiredText(2, 160, "Title"),
     slug: z.preprocess(
       trimInput,
-      z.string().min(2).max(160).regex(/^[a-z0-9-]+$/)
+      z
+        .string()
+        .min(2)
+        .max(160)
+        .regex(/^[a-z0-9-]+$/),
     ),
     type: z.enum(["sport", "culture", "ceremony", "mini_game"]),
     category: requiredText(2, 120, "Category"),
@@ -154,18 +188,23 @@ export const profileCompletionSchema = z.object({
 
 export const profileUpdateSchema = z.object({
   full_name: requiredText(2, 120, "Full name"),
-  school: z.preprocess(trimInput, z.enum(["ENSIA", "NHSM", "NSNN", "ENSSA", "ENSCS", "ESI", "Others"])),
-  year_of_study: z.preprocess(trimInput, z.enum(["1", "2", "3", "4", "5", "other"])),
-  student_id: z.preprocess(
+  school: z.preprocess(
     trimInput,
-    z.string().regex(/^\d{12}$/, "Student ID must be exactly 12 digits.")
-  )
+    z.enum(["ENSIA", "NHSM", "NSNN", "ENSSA", "ENSCS", "ESI", "Others"]),
+  ),
+  year_of_study: z.preprocess(
+    trimInput,
+    z.enum(["1", "2", "3", "4", "5", "other"]),
+  ),
+  student_id: z
+    .preprocess(
+      trimInput,
+      z.string().regex(/^\d{12}$/, "Student ID must be exactly 12 digits."),
+    )
     .optional()
     .or(z.literal("")),
-  username: z.preprocess(
-    trimInput,
-    z.string().regex(/^[a-zA-Z0-9_]{3,32}$/)
-  )
+  username: z
+    .preprocess(trimInput, z.string().regex(/^[a-zA-Z0-9_]{3,32}$/))
     .optional()
     .or(z.literal("")),
   phone: optionalPhone,
@@ -177,7 +216,11 @@ export const sportSchema = z.object({
   name: requiredText(2, 120, "Sport name"),
   slug: z.preprocess(
     trimInput,
-    z.string().min(2).max(120).regex(/^[a-z0-9-]+$/)
+    z
+      .string()
+      .min(2)
+      .max(120)
+      .regex(/^[a-z0-9-]+$/),
   ),
   sport_type: z.enum(["collective", "individual", "culture"]),
   is_team_based: z.boolean().optional(),
@@ -191,15 +234,22 @@ export const teamSchema = z.object({
   name: requiredText(2, 120, "Team name"),
   category: z.preprocess(
     trimInput,
-    z.enum(["collective", "individual", "culture"])
+    z.enum(["collective", "individual", "culture"]),
   ),
 });
-
 export const teamMembershipSchema = z.object({
   team_id: uuid,
-  profile_id: uuid,
+  profile_id: uuid.optional().or(z.literal("")),
   role: requiredText(2, 80, "Role"),
   registration_id: uuid.optional().or(z.literal("")),
+  guest_name: z
+    .preprocess(trimInput, z.string().max(120))
+    .optional()
+    .or(z.literal("")),
+  guest_email: z
+    .preprocess(trimInput, z.string().max(254))
+    .optional()
+    .or(z.literal("")),
 });
 
 export const tournamentSchema = z.object({
@@ -222,17 +272,16 @@ export const profileAdminUpdateSchema = z.object({
   full_name: requiredText(2, 120, "Full name"),
   school: optionalText(120),
   year_of_study: optionalText(20),
-  student_id: z.preprocess(
-    trimInput,
-    z.string().regex(/^\d{12}$/, "Student ID must be exactly 12 digits.")
-  )
+  student_id: z
+    .preprocess(
+      trimInput,
+      z.string().regex(/^\d{12}$/, "Student ID must be exactly 12 digits."),
+    )
     .optional()
     .or(z.literal("")),
   phone: optionalPhone,
-  username: z.preprocess(
-    trimInput,
-    z.string().regex(/^[a-zA-Z0-9_]{3,32}$/)
-  )
+  username: z
+    .preprocess(trimInput, z.string().regex(/^[a-zA-Z0-9_]{3,32}$/))
     .optional()
     .or(z.literal("")),
   avatar_url: z.url().optional().or(z.literal("")),
@@ -252,7 +301,9 @@ export const liveStreamSchema = z.object({
 
 export type RegistrationInput = z.infer<typeof registrationSchema>;
 export type RegistrationBatchInput = z.infer<typeof registrationBatchSchema>;
-export type ActivityRegistrationInput = z.infer<typeof activityRegistrationSchema>;
+export type ActivityRegistrationInput = z.infer<
+  typeof activityRegistrationSchema
+>;
 export type EventInput = z.infer<typeof eventSchema>;
 export type MatchInput = z.infer<typeof matchSchema>;
 export type ResultInput = z.infer<typeof resultSchema>;
@@ -264,6 +315,8 @@ export type SportInput = z.infer<typeof sportSchema>;
 export type TeamInput = z.infer<typeof teamSchema>;
 export type TeamMembershipInput = z.infer<typeof teamMembershipSchema>;
 export type TournamentInput = z.infer<typeof tournamentSchema>;
-export type TournamentAssignmentInput = z.infer<typeof tournamentAssignmentSchema>;
+export type TournamentAssignmentInput = z.infer<
+  typeof tournamentAssignmentSchema
+>;
 export type ProfileAdminUpdateInput = z.infer<typeof profileAdminUpdateSchema>;
 export type LiveStreamInput = z.infer<typeof liveStreamSchema>;

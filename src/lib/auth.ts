@@ -86,11 +86,18 @@ export async function syncAdminRole(user: User) {
   const email = user.email?.toLowerCase() ?? "";
   const isAdmin = getAdminEmails().includes(email);
   const metadata = user.user_metadata ?? {};
-  const metadataUsername = typeof metadata.username === "string" ? metadata.username.trim() : "";
-  const metadataPhone = typeof metadata.phone === "string" ? metadata.phone.trim() : "";
-  const metadataGender = typeof metadata.gender === "string" ? metadata.gender.trim() : "";
-  const metadataSchool = typeof metadata.school === "string" ? metadata.school.trim() : "";
-  const metadataYear = typeof metadata.year_of_study === "string" ? metadata.year_of_study.trim() : "";
+  const metadataUsername =
+    typeof metadata.username === "string" ? metadata.username.trim() : "";
+  const metadataPhone =
+    typeof metadata.phone === "string" ? metadata.phone.trim() : "";
+  const metadataGender =
+    typeof metadata.gender === "string" ? metadata.gender.trim() : "";
+  const metadataSchool =
+    typeof metadata.school === "string" ? metadata.school.trim() : "";
+  const metadataYear =
+    typeof metadata.year_of_study === "string"
+      ? metadata.year_of_study.trim()
+      : "";
 
   const { error: profileError } = await supabase.from("profiles").upsert({
     id: user.id,
@@ -107,8 +114,13 @@ export async function syncAdminRole(user: User) {
 
   if (profileError) {
     if (isMissingTableError(profileError.message, "profiles")) {
-      console.warn("Profiles table is missing. Apply Supabase migrations to enable role sync.");
-      return { synced: false as const, reason: "profiles_table_missing" as const };
+      console.warn(
+        "Profiles table is missing. Apply Supabase migrations to enable role sync.",
+      );
+      return {
+        synced: false as const,
+        reason: "profiles_table_missing" as const,
+      };
     }
 
     throw new Error(`Failed to sync profile: ${profileError.message}`);
@@ -120,7 +132,7 @@ export async function syncAdminRole(user: User) {
       profile_id: user.id,
       role_name: roleLabel,
     },
-    { onConflict: "profile_id,role_name" }
+    { onConflict: "profile_id,role_name" },
   );
 
   if (roleError && !isMissingTableError(roleError.message, "profile_roles")) {
@@ -134,13 +146,16 @@ export async function getProfileCompletionStatus(userId: string) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("full_name, school, year_of_study, gender")
+    .select("full_name, school, year_of_study")
     .eq("id", userId)
     .single();
 
   if (error) {
     if (isMissingTableError(error.message, "profiles")) {
-      return { ready: false as const, reason: "profiles_table_missing" as const };
+      return {
+        ready: false as const,
+        reason: "profiles_table_missing" as const,
+      };
     }
     return { ready: false as const, reason: "unknown" as const };
   }
@@ -148,8 +163,7 @@ export async function getProfileCompletionStatus(userId: string) {
   const hasName = Boolean(data?.full_name?.trim());
   const hasSchool = Boolean(data?.school?.trim());
   const hasYear = Boolean(data?.year_of_study?.trim());
-  const hasGender = Boolean(data?.gender?.trim());
-  return { ready: hasName && hasSchool && hasYear && hasGender };
+  return { ready: hasName && hasSchool && hasYear };
 }
 
 export async function requireAuth() {
