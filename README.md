@@ -75,7 +75,7 @@ pnpm dev
 ## Quality Commands
 
 ```bash
-npm run lint
+pnpm lint
 pnpm build
 ```
 
