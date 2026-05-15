@@ -1,4 +1,8 @@
-# Olympole MVP
+<h1 style="font-family: Arial, sans-serif; font-size: 36px; color: #F39A2E; display: flex; align-items: center; gap: 12px; border-bottom: 3px solid #F39A2E; padding-bottom: 8px;">
+  <img src="public/images/brand/fire.webp" alt="Olympole Brand" style="height: 55px; width: 55px; object-fit: contain; border-radius: 8px;">
+  Olympole - ESC Club Operations Platform
+</h1>
+
 
 Olympole is the ESC Club operations platform for OLYMPOLE 2026.
 
